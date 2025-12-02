@@ -12,6 +12,7 @@ const roomRoutes = require('./routes/room');
 const messageRoutes = require('./routes/message');
 const userRoutes = require('./routes/user');
 const notificationRoutes = require('./routes/notification');
+const friendRoutes = require('./routes/friend');
 
 const app = express();
 const httpServer = createServer(app);
@@ -51,6 +52,7 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/friends', friendRoutes);
 
 // Socket.io handler
 socketHandler(io, app);

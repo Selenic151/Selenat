@@ -70,4 +70,17 @@ export const userAPI = {
   deleteUser: (id) => api.delete(`/users/${id}`),
 };
 
+// Friend API
+export const friendAPI = {
+  searchUsers: (query) => api.get(`/friends/search?q=${query}`),
+  getFriends: () => api.get('/friends/list'),
+  getFriendRequests: () => api.get('/friends/requests'),
+  sendFriendRequest: (userId) => api.post('/friends/request', { userId }),
+  acceptFriendRequest: (userId) => api.post(`/friends/accept/${userId}`),
+  declineFriendRequest: (userId) => api.post(`/friends/decline/${userId}`),
+  cancelFriendRequest: (userId) => api.delete(`/friends/request/${userId}`),
+  removeFriend: (userId) => api.delete(`/friends/${userId}`),
+  checkFriendStatus: (userId) => api.get(`/friends/status/${userId}`),
+};
+
 export default api;

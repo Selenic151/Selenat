@@ -44,19 +44,37 @@ const userSchema = new mongoose.Schema({
   lastSeen: {
     type: Date,
     default: Date.now
+  },
+  friends: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  friendRequests: {
+    sent: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+    received: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }]
   }
 }, {
   timestamps: true
 });
 
 // Hash password before saving
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', function() {
   if (!this.isModified('password')) {
-    return next();
+    return;
   }
 
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  const user = this;
+  return bcrypt.genSalt(10)
+    .then(salt => bcrypt.hash(user.password, salt))
+    .then(hash => {
+      user.password = hash;
+    });
 });
 
 // Method to compare password

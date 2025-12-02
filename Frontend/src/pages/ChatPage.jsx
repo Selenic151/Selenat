@@ -6,6 +6,7 @@ import CreateRoom from '../components/Room/CreateRoom';
 import Notifications from '../components/Notification/Notifications';
 import AddMemberModal from '../components/Room/AddMemberModal';
 import TransferOwnershipModal from '../components/Room/TransferOwnershipModal';
+import FriendsList from '../components/Friend/FriendsList';
 import { useSocket } from '../context/SocketContext';
 
 const loadRooms = async () => {
@@ -25,7 +26,9 @@ const ChatPage = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showFriends, setShowFriends] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [friendRequestCount, setFriendRequestCount] = useState(0);
   const { user, logout } = useAuth();
   const { socket, on, off } = useSocket();
 
@@ -182,6 +185,21 @@ const ChatPage = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowFriends(true)}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors duration-200 relative"
+                title="Bạn bè"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                {friendRequestCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse">
+                    {friendRequestCount}
+                  </span>
+                )}
+              </button>
+              
               <button
                 onClick={handleOpenNotifications}
                 className="p-2 hover:bg-white/20 rounded-full transition-colors duration-200 relative"
@@ -373,6 +391,27 @@ const ChatPage = () => {
             refreshRooms();
           }}
         />
+      )}
+
+      {showFriends && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl h-[600px] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-800">Bạn bè</h2>
+              <button
+                onClick={() => setShowFriends(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <FriendsList onRequestCountChange={setFriendRequestCount} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
