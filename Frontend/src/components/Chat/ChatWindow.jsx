@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../../context/SocketContext';
 import { messageAPI, roomAPI, userAPI } from '../../services/api';
 import socketService from '../../services/socket';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/useTheme';
+import { useMessageCache } from '../../context/useMessageCache';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import TypingIndicator from './TypingIndicator';
@@ -14,6 +15,7 @@ const ChatWindow = ({ room }) => {
   const { socket, joinRoom, leaveRoom } = useSocket();
   const { user } = useAuth();
   const { darkMode, toggleTheme } = useTheme();
+  const { getCachedMessages, setCachedMessages, updateCache } = useMessageCache();
   const [showSidebar, setShowSidebar] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
   const [memberResults, setMemberResults] = useState([]);
@@ -24,31 +26,15 @@ const ChatWindow = ({ room }) => {
   const [hasMore, setHasMore] = useState(true);
   const [pageSize, setPageSize] = useState(0);
   // dynamic average message height (measured at runtime and smoothed)
-  const [avgMessageHeight, setAvgMessageHeight] = useState(72);
+  const [avgMessageHeight, setAvgMessageHeight] = useState(() => {
+    const stored = localStorage.getItem('chat_avgMessageHeight');
+    return stored ? parseFloat(stored) : 72;
+  });
   // sensible page size bounds to avoid too small/large requests
   const MIN_PAGE_SIZE = 5;
   const MAX_PAGE_SIZE = 60;
-
-  const loadMessages = useCallback(async () => {
-    if (!room) return;
-    try {
-      setLoading(true);
-      // compute limit based on available height
-      const headerH = headerRef.current?.offsetHeight || 80;
-      const inputH = inputRef.current?.offsetHeight || 72;
-      const available = window.innerHeight - headerH - inputH - 40;
-      const limitRaw = Math.ceil(available / (avgMessageHeight || 72));
-      const limit = Math.max(MIN_PAGE_SIZE, Math.min(MAX_PAGE_SIZE, limitRaw));
-      setPageSize(limit);
-      const response = await messageAPI.getMessages(room._id, { limit });
-      setMessages(response.data);
-      setHasMore(response.data.length === limit);
-    } catch (error) {
-      console.error('Error loading messages:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [room, avgMessageHeight]);
+  const [newMessagesCount, setNewMessagesCount] = useState(0);
+  const virtuosoRef = useRef(null);
 
   const loadOlderMessages = async () => {
     if (!room || loadingOlder || !hasMore) return;
@@ -68,6 +54,8 @@ const ChatWindow = ({ room }) => {
         return;
       }
       setMessages(prev => [...older, ...prev]);
+      // Update cache with prepended messages
+      updateCache(room._id, (cachedMsgs) => [...older, ...cachedMsgs]);
       if (older.length < limit) setHasMore(false);
     } catch (err) {
       console.error('Load older messages failed', err);
@@ -95,18 +83,78 @@ const ChatWindow = ({ room }) => {
   const handleMeasuredAvg = (measured) => {
     if (!measured || Number.isNaN(measured)) return;
     // exponential moving average with alpha = 0.2
-    setAvgMessageHeight(prev => Math.max(20, prev * 0.8 + measured * 0.2));
+    setAvgMessageHeight(prev => {
+      const newAvg = Math.max(20, prev * 0.8 + measured * 0.2);
+      localStorage.setItem('chat_avgMessageHeight', newAvg.toString());
+      return newAvg;
+    });
+  };
+
+  // Scroll to bottom function
+  const scrollToBottom = () => {
+    if (virtuosoRef.current) {
+      virtuosoRef.current.scrollToIndex({
+        index: messages.length - 1,
+        behavior: 'smooth',
+        align: 'end'
+      });
+      setNewMessagesCount(0);
+    }
   };
 
   useEffect(() => {
     if (!room) return;
-    loadMessages();
+    
+    // Load messages only when room changes
+    const loadInitialMessages = async () => {
+      try {
+        setLoading(true);
+        setNewMessagesCount(0);
+        
+        // Try to get from cache first
+        const cached = getCachedMessages(room._id);
+        if (cached) {
+          setMessages(cached.messages);
+          setHasMore(cached.hasMore);
+          setLoading(false);
+          return;
+        }
+        
+        // Load from API
+        const headerH = headerRef.current?.offsetHeight || 80;
+        const inputH = inputRef.current?.offsetHeight || 72;
+        const available = window.innerHeight - headerH - inputH - 40;
+        const limitRaw = Math.ceil(available / (avgMessageHeight || 72));
+        const limit = Math.max(MIN_PAGE_SIZE, Math.min(MAX_PAGE_SIZE, limitRaw));
+        setPageSize(limit);
+        const response = await messageAPI.getMessages(room._id, { limit });
+        setMessages(response.data);
+        const hasMoreData = response.data.length === limit;
+        setHasMore(hasMoreData);
+        
+        // Cache the results
+        setCachedMessages(room._id, response.data, hasMoreData);
+      } catch (error) {
+        console.error('Error loading messages:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInitialMessages();
     joinRoom(room._id);
 
     const handleIncoming = message => {
       setMessages(prev => {
         if (prev.some(m => m._id === message._id)) return prev;
-        return [...prev, message];
+        const next = [...prev, message];
+        // Update cache
+        updateCache(room._id, (cachedMsgs) => [...cachedMsgs, message]);
+        // Increment new message count if not at bottom
+        if (!isAtBottomRef.current) {
+          setNewMessagesCount(n => n + 1);
+        }
+        return next;
       });
     };
 
@@ -122,7 +170,8 @@ const ChatWindow = ({ room }) => {
       socket?.off('message:received', handleIncoming);
       socket?.off('room:deleted', onRoomDeleted);
     };
-  }, [room, socket, joinRoom, leaveRoom, loadMessages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room, socket, joinRoom, leaveRoom]);
 
   const sendMessageOptimistic = async ({ roomId, content, type = 'text' }) => {
     const tempId = `temp-${Date.now()}`;
@@ -230,10 +279,25 @@ const ChatWindow = ({ room }) => {
           onLoadOlder={loadOlderMessages}
           onMeasureAvg={handleMeasuredAvg}
           isAtBottomRef={isAtBottomRef}
+          virtuosoRef={virtuosoRef}
           onBottomChange={(isBottom) => {
             isAtBottomRef.current = isBottom;
+            if (isBottom) setNewMessagesCount(0);
           }}
         />
+        {newMessagesCount > 0 && (
+          <button 
+            onClick={scrollToBottom} 
+            className={`absolute right-6 bottom-6 z-30 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg transition-all hover:scale-105 ${
+              darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+            } text-white font-medium text-sm`}
+          >
+            <span>{newMessagesCount} tin mới</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Typing indicator */}

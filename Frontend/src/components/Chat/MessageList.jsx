@@ -3,12 +3,26 @@ import { useTheme } from '../../context/useTheme';
 import { useRef, useCallback, useEffect, useMemo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
-const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomChange, loadingOlder = false, hasMore, darkMode, onMeasureAvg }) => {
+const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomChange, loadingOlder = false, hasMore, darkMode, onMeasureAvg, virtuosoRef: externalRef }) => {
   const { user } = useAuth();
   const { darkMode: themeDarkMode } = useTheme();
   const isDark = darkMode !== undefined ? darkMode : themeDarkMode;
-  const virtuosoRef = useRef(null);
+  const internalRef = useRef(null);
+  const virtuosoRef = externalRef || internalRef;
   const measureTimerRef = useRef(null);
+  const loadOlderDebounceRef = useRef(null);
+  const resizeObserverRef = useRef(null);
+
+  // Debounced load older to prevent multiple calls
+  const handleStartReached = useCallback(() => {
+    if (loadOlderDebounceRef.current) return; // already pending
+    if (!onLoadOlder || !hasMore || loadingOlder) return;
+    
+    loadOlderDebounceRef.current = setTimeout(() => {
+      onLoadOlder();
+      loadOlderDebounceRef.current = null;
+    }, 200);
+  }, [onLoadOlder, hasMore, loadingOlder]);
 
   // Measure rendered message bubble heights and report average to parent (throttled)
   useEffect(() => {
@@ -43,6 +57,53 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
     }, 300);
 
     return () => {
+      if (measureTimerRef.current) clearTimeout(measureTimerRef.current);
+      if (loadOlderDebounceRef.current) clearTimeout(loadOlderDebounceRef.current);
+    };
+  }, [messages, loading, onMeasureAvg]);
+
+  // ResizeObserver to detect when message bubbles change size (e.g., images loading)
+  useEffect(() => {
+    if (loading || !onMeasureAvg) return;
+
+    const observer = new ResizeObserver(() => {
+      // Debounce re-measurement when bubbles resize
+      if (measureTimerRef.current) clearTimeout(measureTimerRef.current);
+      measureTimerRef.current = setTimeout(() => {
+        requestAnimationFrame(() => {
+          try {
+            const nodes = document.querySelectorAll('[data-msg-bubble]');
+            if (!nodes || nodes.length === 0) return;
+            const count = Math.min(30, nodes.length);
+            const start = Math.max(0, nodes.length - count);
+            let sum = 0;
+            let measured = 0;
+            for (let i = start; i < nodes.length; i++) {
+              const h = nodes[i].offsetHeight;
+              if (h && !Number.isNaN(h)) {
+                sum += h;
+                measured += 1;
+              }
+            }
+            if (measured >= 3) {
+              const avg = Math.round(sum / measured);
+              onMeasureAvg(avg);
+            }
+          } catch {
+            // measurement failed — ignore
+          }
+        });
+      }, 500);
+    });
+
+    // Observe all message bubbles
+    const bubbles = document.querySelectorAll('[data-msg-bubble]');
+    bubbles.forEach(bubble => observer.observe(bubble));
+
+    resizeObserverRef.current = observer;
+
+    return () => {
+      observer.disconnect();
       if (measureTimerRef.current) clearTimeout(measureTimerRef.current);
     };
   }, [messages, loading, onMeasureAvg]);
@@ -143,15 +204,15 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
         data={items}
         totalCount={items.length}
         itemContent={itemContent}
-        followOutput="auto"
-        alignToBottom
-        initialTopMostItemIndex={items.length - 1}
-        atBottomStateChange={handleAtBottomStateChange}
-        startReached={() => {
-          if (onLoadOlder && hasMore && !loadingOlder) {
-            onLoadOlder();
-          }
+        followOutput={(isAtBottom) => {
+          // Auto-scroll to bottom only if user is already at bottom or on initial load
+          if (isAtBottom) return 'smooth';
+          return false;
         }}
+        alignToBottom
+        initialTopMostItemIndex={items.length > 0 ? items.length - 1 : 0}
+        atBottomStateChange={handleAtBottomStateChange}
+        startReached={handleStartReached}
         style={{ height: '100%' }}
         className="py-3"
         components={{
