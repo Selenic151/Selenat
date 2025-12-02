@@ -29,6 +29,8 @@ const ChatPage = () => {
   const [showFriends, setShowFriends] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [friendRequestCount, setFriendRequestCount] = useState(0);
+  const [sidebarWidth, setSidebarWidth] = useState(320); // Default 320px (w-80)
+  const [isResizing, setIsResizing] = useState(false);
   const { user, logout } = useAuth();
   const { socket, on, off } = useSocket();
 
@@ -41,6 +43,31 @@ const ChatPage = () => {
     });
     loadUnreadCount();
   }, []);
+
+  // Handle resize
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      const newWidth = e.clientX;
+      if (newWidth >= 250 && newWidth <= 500) {
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   const loadUnreadCount = async () => {
     try {
@@ -169,7 +196,10 @@ const ChatPage = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100">
       {/* Sidebar */}
-      <div className="w-80 bg-white/95 backdrop-blur-sm border-r border-gray-200 flex flex-col shadow-xl">
+      <div 
+        className="bg-white/95 backdrop-blur-sm border-r border-gray-200 flex flex-col shadow-xl relative"
+        style={{ width: `${sidebarWidth}px`, minWidth: '250px', maxWidth: '500px' }}
+      >
         {/* Header */}
         <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
           <div className="flex items-center justify-between">
