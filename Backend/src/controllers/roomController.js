@@ -173,22 +173,32 @@ const deleteRoom = async (req, res) => {
         if (!room) {
             return res.status(404).json({ message: 'Phòng không tồn tại' });
         }
-        // Chỉ cho phép quản trị viên phòng xoá
-        if (!room.admins.some(adminId => adminId.toString() === req.user._id.toString())) {
-            return res.status(403).json({ message: 'Truy cập bị từ chối, bạn không phải quản trị viên của phòng này' });
+        
+        // Chỉ cho phép creator xóa phòng
+        if (room.creator.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Chỉ chủ phòng mới có quyền xóa phòng' });
         }
-                // Xoá tất cả tin nhắn trong phòng
-                await Message.deleteMany({ room: room._id });
-                // Delete room document
-                await room.deleteOne();
+        
+        // Xóa tất cả tin nhắn trong phòng
+        await Message.deleteMany({ room: room._id });
+        
+        // Xóa tất cả thông báo liên quan đến phòng
+        await Notification.deleteMany({ room: room._id });
+        
+        // Xóa room khỏi database
+        await Room.findByIdAndDelete(room._id);
 
-                // Emit socket event so connected clients update in realtime
-                const io = req.app.get('io');
-                if (io) {
-                    try { io.emit('room:deleted', { roomId: room._id.toString() }); } catch (e) { console.error('Emit room:deleted failed', e); }
-                }
+        // Emit socket event
+        const io = req.app.get('io');
+        if (io) {
+            try { 
+                io.emit('room:deleted', { roomId: room._id.toString() }); 
+            } catch (e) { 
+                console.error('Emit room:deleted failed', e); 
+            }
+        }
 
-                res.json({ message: 'Phòng đã bị xoá' });
+        res.json({ message: 'Phòng đã bị xóa', deleted: true });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -201,14 +211,64 @@ const removeRoomMember = async (req, res) => {
         if (!room) {
             return res.status(404).json({ message: 'Phòng không tồn tại' });
         }
-        // Chỉ cho phép quản trị viên phòng xoá thành viên
-        if (!room.admins.some(adminId => adminId.toString() === req.user._id.toString())) {
-            return res.status(403).json({ message: 'Truy cập bị từ chối, bạn không phải quản trị viên của phòng này' });
-        }
         
         const { userId } = req.params;
+        const isRemovingSelf = userId === req.user._id.toString();
+        const isAdmin = room.admins.some(adminId => adminId.toString() === req.user._id.toString());
+        const isCreator = userId === room.creator.toString();
         
+        // Cho phép: user tự rời phòng HOẶC admin xóa member khác
+        if (!isRemovingSelf && !isAdmin) {
+            return res.status(403).json({ message: 'Truy cập bị từ chối, bạn không có quyền xóa thành viên này' });
+        }
+        
+        // Nếu creator muốn rời phòng, phần tích tình huống
+        if (isCreator && isRemovingSelf) {
+            // Nếu chỉ còn mình creator -> xóa phòng luôn
+            if (room.members.length <= 1) {
+                await Message.deleteMany({ room: room._id });
+                await Notification.deleteMany({ room: room._id });
+                await Room.findByIdAndDelete(room._id);
+                
+                const io = req.app.get('io');
+                if (io) {
+                    try { io.emit('room:deleted', { roomId: room._id.toString() }); } 
+                    catch (e) { console.error('Emit room:deleted failed', e); }
+                }
+                
+                return res.json({ message: 'Phòng đã bị xóa do không còn thành viên', deleted: true });
+            }
+            
+            // Nếu còn thành viên khác -> yêu cầu chuyển quyền
+            return res.status(400).json({ 
+                message: 'Chủ phòng phải chuyển quyền cho thành viên khác trước khi rời phòng',
+                requireTransfer: true,
+                members: room.members.filter(m => m.toString() !== userId)
+            });
+        }
+        
+        // Xóa member khỏi room
         room.members = room.members.filter(memberId => memberId.toString() !== userId);
+        
+        // Nếu là admin tự rời, xóa khỏi danh sách admin
+        if (isRemovingSelf && isAdmin) {
+            room.admins = room.admins.filter(adminId => adminId.toString() !== userId);
+        }
+
+        // Kiểm tra nếu không còn thành viên nào -> xóa room khỏi DB
+        if (room.members.length === 0) {
+            await Message.deleteMany({ room: room._id });
+            await Notification.deleteMany({ room: room._id });
+            await Room.findByIdAndDelete(room._id);
+            
+            const io = req.app.get('io');
+            if (io) {
+                try { io.emit('room:deleted', { roomId: room._id.toString() }); } 
+                catch (e) { console.error('Emit room:deleted failed', e); }
+            }
+            
+            return res.json({ message: 'Phòng đã bị xóa do không còn thành viên', deleted: true });
+        }
 
         await room.save();
         await room.populate('creator members admins', '-password');
@@ -240,6 +300,47 @@ const uploadRoomAvatar = async (req, res) => {
     }
 };
 
+// Chuyển quyền creator cho thành viên khác
+const transferOwnership = async (req, res) => {
+    try {
+        const room = await Room.findById(req.params.id);
+        if (!room) {
+            return res.status(404).json({ message: 'Phòng không tồn tại' });
+        }
+        
+        // Chỉ creator mới được chuyển quyền
+        if (room.creator.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Chỉ chủ phòng mới có quyền chuyển quyền' });
+        }
+        
+        const { newCreatorId } = req.body;
+        
+        if (!newCreatorId) {
+            return res.status(400).json({ message: 'Vui lòng chọn thành viên mới' });
+        }
+        
+        // Kiểm tra thành viên mới có trong phòng không
+        if (!room.members.some(m => m.toString() === newCreatorId)) {
+            return res.status(400).json({ message: 'Thành viên không tồn tại trong phòng' });
+        }
+        
+        // Chuyển quyền creator
+        room.creator = newCreatorId;
+        
+        // Đảm bảo creator mới là admin
+        if (!room.admins.some(a => a.toString() === newCreatorId)) {
+            room.admins.push(newCreatorId);
+        }
+        
+        await room.save();
+        await room.populate('creator members admins', '-password');
+        
+        res.json(room);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     createRoom,
     getRooms: getUserRooms,
@@ -248,5 +349,6 @@ module.exports = {
     addMember: addRoomMember,
     removeMember: removeRoomMember,
     deleteRoom,
-    uploadRoomAvatar
+    uploadRoomAvatar,
+    transferOwnership
 };

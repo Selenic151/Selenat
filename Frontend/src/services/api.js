@@ -41,6 +41,7 @@ export const roomAPI = {
   deleteRoom: (id) => api.delete(`/rooms/${id}`),
   addMember: (id, userId) => api.post(`/rooms/${id}/members`, { userId }),
   removeMember: (id, userId) => api.delete(`/rooms/${id}/members/${userId}`),
+  transferOwnership: (id, newCreatorId) => api.post(`/rooms/${id}/transfer`, { newCreatorId }),
 };
 
 // Notifications API

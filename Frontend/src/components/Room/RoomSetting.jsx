@@ -45,7 +45,7 @@ const RoomSettings = ({ room, onClose, onUpdate }) => {
   };
 
   const handleDeleteRoom = async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa room này?')) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa room này? Tất cả tin nhắn sẽ bị xóa!')) return;
 
     try {
       await roomAPI.deleteRoom(room._id);
@@ -54,6 +54,48 @@ const RoomSettings = ({ room, onClose, onUpdate }) => {
     } catch (error) {
       console.error('Error deleting room:', error);
       alert('Không thể xóa room: ' + error.response?.data?.message);
+    }
+  };
+
+  const handleRemoveMember = async (userId, username) => {
+    const isSelf = userId === user._id;
+    const isCreatorLeaving = isSelf && isCreator;
+    
+    const confirmMsg = isSelf 
+      ? `Bạn có chắc chắn muốn rời khỏi phòng "${room.name}"?`
+      : `Bạn có chắc chắn muốn xóa "${username}" khỏi phòng?`;
+    
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const response = await roomAPI.removeMember(room._id, userId);
+      
+      // Kiểm tra nếu phòng bị xóa
+      if (response.data.deleted) {
+        alert(response.data.message);
+        onClose();
+        window.location.reload();
+        return;
+      }
+      
+      if (isSelf) {
+        // User rời phòng - đóng modal và reload
+        onClose();
+        window.location.reload();
+      } else {
+        // Admin xóa member - cập nhật room data
+        const updated = (await roomAPI.getRoomById(room._id)).data;
+        onUpdate(updated);
+      }
+    } catch (error) {
+      console.error('Error removing member:', error);
+      
+      // Nếu creator cần chuyển quyền
+      if (error.response?.data?.requireTransfer && isCreatorLeaving) {
+        alert('Bạn cần chuyển quyền chủ phòng cho thành viên khác trước khi rời. Vui lòng sử dụng nút "Rời khỏi nhóm" ở sidebar để thực hiện.');
+      } else {
+        alert('Không thể xóa thành viên: ' + error.response?.data?.message);
+      }
     }
   };
 
@@ -172,6 +214,60 @@ const RoomSettings = ({ room, onClose, onUpdate }) => {
               <label className="block text-sm font-medium mb-2">Avatar Room</label>
               <input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files[0])} />
             </div>
+
+            {/* Danh sách thành viên */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Thành viên ({room.members?.length || 0})</label>
+              <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg">
+                {room.members?.map(member => {
+                  const isSelf = member._id === user._id;
+                  const isRoomCreator = member._id === room.creator._id;
+                  const isMemberAdmin = room.admins?.some(admin => admin._id === member._id);
+                  
+                  return (
+                    <div key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                          {member.username?.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-800">
+                            {member.username}
+                            {isSelf && <span className="text-xs text-blue-600 ml-2">(Bạn)</span>}
+                          </p>
+                          <div className="flex items-center space-x-2">
+                            <p className="text-xs text-gray-500">{member.email}</p>
+                            {isRoomCreator && (
+                              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full font-medium">Creator</span>
+                            )}
+                            {isMemberAdmin && !isRoomCreator && (
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">Admin</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Chỉ hiển thị nút xóa nếu: user muốn rời (isSelf) HOẶC admin muốn xóa người khác (không phải creator) */}
+                      {(isSelf || (isAdmin && !isRoomCreator)) && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMember(member._id, member.username)}
+                          className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                            isSelf 
+                              ? 'bg-orange-500 hover:bg-orange-600 text-white' 
+                              : 'bg-red-500 hover:bg-red-600 text-white'
+                          }`}
+                          title={isSelf ? 'Rời khỏi phòng' : 'Xóa thành viên'}
+                        >
+                          {isSelf ? 'Rời phòng' : 'Xóa'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="pt-4 space-y-2">
               <button
                 type="submit"
@@ -181,11 +277,11 @@ const RoomSettings = ({ room, onClose, onUpdate }) => {
                 {loading ? 'Đang cập nhật...' : 'Cập nhật'}
               </button>
 
-              {(isCreator || user.role === 'admin') && (
+              {isCreator && (
                 <button
                   type="button"
                   onClick={handleDeleteRoom}
-                  className="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                  className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                 >
                   Xóa Room
                 </button>
@@ -193,8 +289,58 @@ const RoomSettings = ({ room, onClose, onUpdate }) => {
             </div>
           </form>
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            Chỉ admin mới có thể chỉnh sửa room
+          <div className="space-y-4">
+            <div className="text-center py-4 text-gray-500 text-sm border-b border-gray-200">
+              Chỉ admin mới có thể chỉnh sửa room
+            </div>
+            
+            {/* Danh sách thành viên cho non-admin */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Thành viên ({room.members?.length || 0})</label>
+              <div className="max-h-64 overflow-y-auto border border-gray-300 rounded-lg">
+                {room.members?.map(member => {
+                  const isSelf = member._id === user._id;
+                  const isRoomCreator = member._id === room.creator._id;
+                  const isMemberAdmin = room.admins?.some(admin => admin._id === member._id);
+                  
+                  return (
+                    <div key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                          {member.username?.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-800">
+                            {member.username}
+                            {isSelf && <span className="text-xs text-blue-600 ml-2">(Bạn)</span>}
+                          </p>
+                          <div className="flex items-center space-x-2">
+                            <p className="text-xs text-gray-500">{member.email}</p>
+                            {isRoomCreator && (
+                              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full font-medium">Creator</span>
+                            )}
+                            {isMemberAdmin && !isRoomCreator && (
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">Admin</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {isSelf && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMember(member._id, member.username)}
+                          className="px-3 py-1 text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors"
+                          title="Rời khỏi phòng"
+                        >
+                          Rời phòng
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>

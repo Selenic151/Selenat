@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { roomAPI } from '../services/api';
+import { roomAPI, notificationAPI } from '../services/api';
 import ChatWindow from '../components/Chat/ChatWindow';
 import CreateRoom from '../components/Room/CreateRoom';
 import Notifications from '../components/Notification/Notifications';
+import AddMemberModal from '../components/Room/AddMemberModal';
+import TransferOwnershipModal from '../components/Room/TransferOwnershipModal';
+import { useSocket } from '../context/SocketContext';
 
 const loadRooms = async () => {
   try {
@@ -20,7 +23,11 @@ const ChatPage = () => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { user, logout } = useAuth();
+  const { socket, on, off } = useSocket();
 
   useEffect(() => {
     loadRooms().then((data) => {
@@ -29,10 +36,33 @@ const ChatPage = () => {
         setSelectedRoom(data[0]);
       }
     });
+    loadUnreadCount();
   }, []);
 
+  const loadUnreadCount = async () => {
+    try {
+      const res = await notificationAPI.getNotifications();
+      const unread = res.data.filter(n => n.status === 'pending').length;
+      setUnreadCount(unread);
+    } catch (err) {
+      console.error('Error loading notifications:', err);
+    }
+  };
+
+  // Lắng nghe socket event cho thông báo mới
   useEffect(() => {
-    const handler = (e) => {
+    if (!socket) return;
+    
+    const handleNewInvitation = () => {
+      setUnreadCount(prev => prev + 1);
+    };
+    
+    on('invitation:received', handleNewInvitation);
+    return () => off('invitation:received', handleNewInvitation);
+  }, [socket, on, off]);
+
+  useEffect(() => {
+    const handleRoomDeleted = (e) => {
       const { roomId } = e.detail || {};
       if (roomId) {
         // refresh list and clear selection if deleted
@@ -42,8 +72,19 @@ const ChatPage = () => {
         }
       }
     };
-    window.addEventListener('roomDeleted', handler);
-    return () => window.removeEventListener('roomDeleted', handler);
+
+    const handleRoomAccepted = () => {
+      // Refresh rooms when user accepts invitation
+      refreshRooms();
+    };
+
+    window.addEventListener('roomDeleted', handleRoomDeleted);
+    window.addEventListener('roomAccepted', handleRoomAccepted);
+    
+    return () => {
+      window.removeEventListener('roomDeleted', handleRoomDeleted);
+      window.removeEventListener('roomAccepted', handleRoomAccepted);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRoom]);
 
@@ -77,6 +118,51 @@ const ChatPage = () => {
     }
   };
 
+  const handleLeaveRoom = async () => {
+    if (!selectedRoom) return;
+    
+    const isCreator = selectedRoom.creator._id === user._id;
+    
+    // Nếu là creator và còn thành viên khác -> yêu cầu chuyển quyền
+    if (isCreator && selectedRoom.members.length > 1) {
+      setShowTransferModal(true);
+      return;
+    }
+    
+    if (!window.confirm(`Bạn có chắc chắn muốn rời khỏi phòng "${selectedRoom.name}"?`)) return;
+
+    try {
+      const response = await roomAPI.removeMember(selectedRoom._id, user._id);
+      
+      // Kiểm tra nếu phòng bị xóa
+      if (response.data.deleted) {
+        alert(response.data.message);
+      }
+      
+      setSelectedRoom(null);
+      await refreshRooms();
+    } catch (error) {
+      console.error('Error leaving room:', error);
+      
+      // Xử lý trường hợp requireTransfer
+      if (error.response?.data?.requireTransfer) {
+        setShowTransferModal(true);
+      } else {
+        alert('Không thể rời khỏi phòng: ' + error.response?.data?.message);
+      }
+    }
+  };
+
+  const handleOpenNotifications = () => {
+    setShowNotifications(true);
+  };
+
+  const handleCloseNotifications = () => {
+    setShowNotifications(false);
+    // Reload unread count khi đóng modal
+    loadUnreadCount();
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100">
       {/* Sidebar */}
@@ -97,13 +183,18 @@ const ChatPage = () => {
             </div>
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => setShowNotifications(true)}
+                onClick={handleOpenNotifications}
                 className="p-2 hover:bg-white/20 rounded-full transition-colors duration-200 relative"
                 title="Thông báo"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM15 17H9a6 6 0 01-6-6V9a6 6 0 0110.293-4.293L15 9v8z" />
                 </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </button>
               
               <button
@@ -194,6 +285,30 @@ const ChatPage = () => {
             )}
           </div>
         </div>
+
+        {/* Room Actions */}
+        {selectedRoom && (
+          <div className="border-t border-gray-200 p-4 space-y-2">
+            <button
+              onClick={() => setShowAddMember(true)}
+              className="w-full flex items-center justify-center px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 font-medium text-sm"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              Thêm thành viên
+            </button>
+            <button
+              onClick={handleLeaveRoom}
+              className="w-full flex items-center justify-center px-4 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200 font-medium text-sm"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Rời khỏi nhóm
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Chat Window */}
@@ -225,7 +340,7 @@ const ChatPage = () => {
                 </div>
               </div>
               <button
-                onClick={() => setShowNotifications(false)}
+                onClick={handleCloseNotifications}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
               >
                 <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,10 +349,30 @@ const ChatPage = () => {
               </button>
             </div>
             <div className="overflow-y-auto max-h-[70vh]">
-              <Notifications />
+              <Notifications onAccept={refreshRooms} />
             </div>
           </div>
         </div>
+      )}
+
+      {showAddMember && selectedRoom && (
+        <AddMemberModal
+          room={selectedRoom}
+          onClose={() => setShowAddMember(false)}
+          onSuccess={refreshRooms}
+        />
+      )}
+
+      {showTransferModal && selectedRoom && (
+        <TransferOwnershipModal
+          room={selectedRoom}
+          currentUserId={user._id}
+          onClose={() => setShowTransferModal(false)}
+          onSuccess={() => {
+            setSelectedRoom(null);
+            refreshRooms();
+          }}
+        />
       )}
     </div>
   );

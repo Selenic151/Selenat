@@ -159,7 +159,11 @@ const ChatWindow = ({ room }) => {
     };
 
     const onRoomDeleted = ({ roomId }) => {
-      if (roomId === room._id) setMessages([]);
+      if (roomId === room._id) {
+        setMessages([]);
+        // Notify ChatPage to refresh room list
+        window.dispatchEvent(new CustomEvent('roomDeleted', { detail: { roomId } }));
+      }
     };
 
     socket?.on('message:received', handleIncoming);

@@ -8,7 +8,8 @@ const {
   addMember,
   removeMember,
   deleteRoom,
-  uploadRoomAvatar
+  uploadRoomAvatar,
+  transferOwnership
 } = require('../controllers/roomController');
 const { protect } = require('../middleware/auth');
 const multer = require('multer');
@@ -38,5 +39,6 @@ router.route('/:id')
 router.post('/:id/members', protect, addMember);
 router.delete('/:id/members/:userId', protect, removeMember);
 router.put('/:id/avatar', protect, upload.single('avatar'), uploadRoomAvatar);
+router.post('/:id/transfer', protect, transferOwnership);
 
 module.exports = router;

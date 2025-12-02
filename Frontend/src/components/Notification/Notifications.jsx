@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { notificationAPI } from '../../services/api';
 import { useSocket } from '../../context/SocketContext';
 
-const Notifications = () => {
+const Notifications = ({ onAccept }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const { socket, on, off } = useSocket();
@@ -38,6 +38,10 @@ const Notifications = () => {
       setNotifications(prev => prev.map(n => n._id === id ? { ...n, status: 'accepted' } : n));
       // mark read
       await notificationAPI.markRead(id);
+      // Dispatch event để ChatPage refresh rooms
+      window.dispatchEvent(new CustomEvent('roomAccepted'));
+      // Call callback if provided
+      onAccept?.();
     } catch (err) { console.error(err); }
   };
   const decline = async (id) => {
