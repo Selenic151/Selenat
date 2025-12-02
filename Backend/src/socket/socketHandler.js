@@ -80,8 +80,8 @@ module.exports = (io, app) => {
       socket.emit('room:left', { roomId });
     });
 
-    // Send message
-    socket.on('message:send', async (data) => {
+    // Send message (supports ACK callback)
+    socket.on('message:send', async (data, callback) => {
       try {
         const { roomId, content, type = 'text' } = data;
 
@@ -112,9 +112,25 @@ module.exports = (io, app) => {
 
         // Broadcast to room
         io.to(roomId).emit('message:received', message);
+        // Acknowledge to sender with saved message
+        if (typeof callback === 'function') {
+          try { callback({ success: true, message }); } catch(e) { /* ignore */ }
+        }
       } catch (error) {
         console.error('Error sending message:', error);
         socket.emit('error', { message: 'Failed to send message' });
+        if (typeof callback === 'function') {
+          try { callback({ success: false, error: error.message }); } catch(e) {}
+        }
+      }
+    });
+
+    // Allow clients to notify server of a deleted room (broadcast to others)
+    socket.on('room:deleted', ({ roomId }) => {
+      try {
+        io.emit('room:deleted', { roomId });
+      } catch (err) {
+        console.error('Error broadcasting room:deleted', err);
       }
     });
 

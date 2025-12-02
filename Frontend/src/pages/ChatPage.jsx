@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { roomAPI } from '../services/api';
 import ChatWindow from '../components/Chat/ChatWindow';
+import CreateRoom from '../components/Room/CreateRoom';
+import Notifications from '../components/Notification/Notifications';
 
 const loadRooms = async () => {
   try {
@@ -16,6 +18,8 @@ const loadRooms = async () => {
 const ChatPage = () => {
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
+  const [showCreateRoom, setShowCreateRoom] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const { user, logout } = useAuth();
 
   useEffect(() => {
@@ -27,8 +31,54 @@ const ChatPage = () => {
     });
   }, []);
 
+  useEffect(() => {
+    const handler = (e) => {
+      const { roomId } = e.detail || {};
+      if (roomId) {
+        // refresh list and clear selection if deleted
+        refreshRooms();
+        if (selectedRoom && selectedRoom._id === roomId) {
+          setSelectedRoom(null);
+        }
+      }
+    };
+    window.addEventListener('roomDeleted', handler);
+    return () => window.removeEventListener('roomDeleted', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRoom]);
+
+  const refreshRooms = async () => {
+    const data = await loadRooms();
+    setRooms(data);
+    if (data.length > 0 && !selectedRoom) {
+      setSelectedRoom(data[0]);
+    }
+  };
+
+  const handleCreateRoom = () => {
+    setShowCreateRoom(true);
+  };
+
+  const handleRoomCreated = async (roomData) => {
+    try {
+      // Create room via API
+      const res = await roomAPI.createRoom(roomData);
+      setShowCreateRoom(false);
+
+      // Refresh rooms and select newly created room if available
+      await refreshRooms();
+      if (res && res.data) {
+        setSelectedRoom(res.data);
+      }
+    } catch (error) {
+      console.error('Create room failed', error);
+      // still close modal (CreateRoom shows loading) or keep open for retry
+      setShowCreateRoom(false);
+    }
+  };
+
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100">
       {/* Sidebar */}
       <div className="w-80 bg-white/95 backdrop-blur-sm border-r border-gray-200 flex flex-col shadow-xl">
         {/* Header */}
@@ -45,15 +95,27 @@ const ChatPage = () => {
                 <p className="text-sm text-blue-100">Trò chuyện tức thì</p>
               </div>
             </div>
-            <button
-              onClick={logout}
-              className="p-2 hover:bg-white/20 rounded-full transition-colors duration-200"
-              title="Đăng xuất"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowNotifications(true)}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors duration-200 relative"
+                title="Thông báo"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM15 17H9a6 6 0 01-6-6V9a6 6 0 0110.293-4.293L15 9v8z" />
+                </svg>
+              </button>
+              
+              <button
+                onClick={logout}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors duration-200"
+                title="Đăng xuất"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* User Info */}
@@ -77,7 +139,17 @@ const ChatPage = () => {
               <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              Phòng chat ({rooms.length})
+              <span>Phòng chat ({rooms.length})</span>
+              <button
+                onClick={handleCreateRoom}
+                className="ml-auto inline-flex items-center px-3 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
+                title="Tạo phòng mới"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Tạo phòng
+              </button>
             </h2>
 
             <div className="space-y-2">
@@ -125,9 +197,48 @@ const ChatPage = () => {
       </div>
 
       {/* Chat Window */}
-      <div className="flex-1">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <ChatWindow room={selectedRoom} />
       </div>
+
+      {/* Modals */}
+      {showCreateRoom && (
+        <CreateRoom
+          onClose={() => setShowCreateRoom(false)}
+          onCreate={handleRoomCreated}
+        />
+      )}
+
+      {showNotifications && (
+        <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden border border-white/20">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200/50">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM15 17H9a6 6 0 01-6-6V9a6 6 0 0110.293-4.293L15 9v8z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">Thông báo</h2>
+                  <p className="text-sm text-gray-500">Lời mời tham gia phòng chat</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+              >
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[70vh]">
+              <Notifications />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

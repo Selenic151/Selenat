@@ -7,7 +7,8 @@ const Room = require('../models/Room');
 const getMessages = async (req, res) => {
   try {
     const { roomId } = req.params;
-    const { limit = 50, before } = req.query;
+    // default page size 7 as requested
+    const { limit = 7, before, after } = req.query;
 
     // Check if user is a member of the room
     const room = await Room.findById(roomId);
@@ -25,18 +26,34 @@ const getMessages = async (req, res) => {
 
     // Build query
     const query = { room: roomId };
+    let sortOrder = -1;
+    // Semantics: use `after` as a cursor to fetch older messages (createdAt < after)
     if (before) {
       query.createdAt = { $lt: new Date(before) };
+      sortOrder = -1; // newest first, we'll reverse later
+    } else if (after) {
+      // Treat `after` as a cursor to load older messages (client passes oldest createdAt)
+      query.createdAt = { $lt: new Date(after) };
+      sortOrder = -1;
+    } else {
+      // initial load: return latest messages (descending, then reverse)
+      sortOrder = -1;
     }
 
     // Get messages
     const messages = await Message.find(query)
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: sortOrder })
       .limit(parseInt(limit))
       .populate('sender', 'username avatar')
       .populate('readBy.user', 'username');
 
-    res.json(messages.reverse());
+    // If we sorted descending (newest first), reverse to chronological order
+    if (sortOrder === -1) {
+      return res.json(messages.reverse());
+    }
+
+    // ascending order already chronological
+    res.json(messages);
   } catch (error) {
     console.error('Get messages error:', error);
     res.status(500).json({ message: error.message });

@@ -57,10 +57,22 @@ socketHandler(io, app);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  try {
+    console.error('Unhandled error on request', {
+      method: req.method,
+      path: req.originalUrl,
+      body: req.body,
+      params: req.params,
+      query: req.query,
+      errorName: err && err.name,
+      errorMessage: err && err.message,
+      stack: err && err.stack
+    });
+  } catch (logErr) {
+    console.error('Error while logging original error:', logErr);
+  }
   res.status(500).json({ 
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : {}
+    message: err && err.message ? err.message : 'Something went wrong!'
   });
 });
 

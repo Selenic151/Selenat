@@ -49,9 +49,22 @@ class SocketService {
   }
 
   sendMessage(data) {
-    if (this.socket) {
-      this.socket.emit('message:send', data);
-    }
+    return new Promise((resolve, reject) => {
+      if (!this.socket) return reject(new Error('Socket not connected'));
+      try {
+        this.socket.timeout(5000).emit('message:send', data, (ack) => {
+          // ack expected to be { success: true, message } or { success: false, error }
+          if (!ack) return resolve(null);
+          if (ack.success) {
+            // normalize: some servers may return the message directly
+            return resolve(ack.message || ack);
+          }
+          return reject(new Error(ack.error || 'Send failed'));
+        });
+      } catch (err) {
+        return reject(err);
+      }
+    });
   }
 
   startTyping(roomId) {
