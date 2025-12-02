@@ -4,6 +4,7 @@ export const roomAPI = {
   getRooms: () => apiClient.get('/rooms'),
   getRoomById: (id) => apiClient.get(`/rooms/${id}`),
   createRoom: (data) => apiClient.post('/rooms', data),
+  createDirectRoom: (userId) => apiClient.post('/rooms/direct', { userId }),
   updateRoom: (id, data) => apiClient.put(`/rooms/${id}`, data),
   uploadRoomAvatar: (id, formData) => apiClient.put(`/rooms/${id}/avatar`, formData, { 
     headers: { 'Content-Type': 'multipart/form-data' }

@@ -7,6 +7,7 @@ import Notifications from '../components/Notification/Notifications';
 import AddMemberModal from '../components/Room/AddMemberModal';
 import TransferOwnershipModal from '../components/Room/TransferOwnershipModal';
 import FriendsList from '../components/Friend/FriendsList';
+import NewMessageModal from '../components/Chat/NewMessageModal';
 import { useSocket } from '../context/SocketContext';
 
 const loadRooms = async () => {
@@ -27,6 +28,7 @@ const ChatPage = () => {
   const [showAddMember, setShowAddMember] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
+  const [showNewMessage, setShowNewMessage] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [friendRequestCount, setFriendRequestCount] = useState(0);
   const [sidebarWidth, setSidebarWidth] = useState(320); // Default 320px (w-80)
@@ -269,10 +271,19 @@ const ChatPage = () => {
                 {user?.username?.charAt(0).toUpperCase()}
               </span>
             </div>
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-medium text-white">{user?.username}</p>
               <p className="text-xs text-blue-100">Đang hoạt động</p>
             </div>
+            <button
+              onClick={() => setShowNewMessage(true)}
+              className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors duration-200"
+              title="Tin nhắn mới"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -297,35 +308,46 @@ const ChatPage = () => {
             </h2>
 
             <div className="space-y-2">
-              {rooms.map((room) => (
-                <div
-                  key={room._id}
-                  onClick={() => setSelectedRoom(room)}
-                  className={`p-4 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md ${
-                    selectedRoom?._id === room._id
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform scale-[1.02]'
-                      : 'bg-gray-50 hover:bg-white border border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h3 className={`font-semibold text-sm ${
-                        selectedRoom?._id === room._id ? 'text-white' : 'text-gray-800'
-                      }`}>
-                        {room.name}
-                      </h3>
-                      <p className={`text-xs mt-1 ${
-                        selectedRoom?._id === room._id ? 'text-blue-100' : 'text-gray-500'
-                      }`}>
-                        {room.members?.length || 0} thành viên
-                      </p>
+              {rooms.map((room) => {
+                // Hiển thị tên người kia cho direct room
+                const getRoomDisplayName = () => {
+                  if (room.type === 'direct') {
+                    const otherMember = room.members?.find(m => m._id !== user._id);
+                    return otherMember?.username || 'Unknown User';
+                  }
+                  return room.name;
+                };
+
+                return (
+                  <div
+                    key={room._id}
+                    onClick={() => setSelectedRoom(room)}
+                    className={`p-4 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md ${
+                      selectedRoom?._id === room._id
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform scale-[1.02]'
+                        : 'bg-gray-50 hover:bg-white border border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h3 className={`font-semibold text-sm ${
+                          selectedRoom?._id === room._id ? 'text-white' : 'text-gray-800'
+                        }`}>
+                          {getRoomDisplayName()}
+                        </h3>
+                        <p className={`text-xs mt-1 ${
+                          selectedRoom?._id === room._id ? 'text-blue-100' : 'text-gray-500'
+                        }`}>
+                          {room.members?.length || 0} thành viên
+                        </p>
+                      </div>
+                      {selectedRoom?._id === room._id && (
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                      )}
                     </div>
-                    {selectedRoom?._id === room._id && (
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {rooms.length === 0 && (
@@ -455,6 +477,18 @@ const ChatPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showNewMessage && (
+        <NewMessageModal
+          isOpen={showNewMessage}
+          onClose={() => setShowNewMessage(false)}
+          onRoomCreated={(room) => {
+            setRooms([room, ...rooms]);
+            setSelectedRoom(room);
+            setShowNewMessage(false);
+          }}
+        />
       )}
     </div>
   );

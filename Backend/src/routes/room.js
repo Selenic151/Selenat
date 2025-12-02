@@ -9,7 +9,8 @@ const {
   removeMember,
   deleteRoom,
   uploadRoomAvatar,
-  transferOwnership
+  transferOwnership,
+  createDirectRoom
 } = require('../controllers/roomController');
 const { protect } = require('../middleware/auth');
 const multer = require('multer');
@@ -30,6 +31,8 @@ const upload = multer({
 router.route('/')
   .get(protect, getRooms)
   .post(protect, createRoom);
+
+router.post('/direct', protect, createDirectRoom);
 
 router.route('/:id')
   .get(protect, getRoomById)

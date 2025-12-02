@@ -292,12 +292,21 @@ const ChatWindow = ({ room }) => {
     </div>
   );
 
+  // Hiển thị tên người kia cho direct room
+  const getRoomDisplayName = () => {
+    if (room.type === 'direct') {
+      const otherMember = room.members?.find(m => m._id !== user._id);
+      return otherMember?.username || 'Unknown User';
+    }
+    return room.name;
+  };
+
   return (
     <div className={`flex-1 flex flex-col overflow-hidden ${darkMode ? 'bg-gray-950 text-gray-100' : 'bg-white'}`}>
       {/* Header - Modern, clean */}
       <div ref={headerRef} className={`flex items-center justify-between px-5 py-3.5 border-b ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-gray-50'}`}>
         <div>
-          <h2 className="text-base font-semibold">{room.name}</h2>
+          <h2 className="text-base font-semibold">{getRoomDisplayName()}</h2>
           <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{room.members?.length || 0} thành viên</p>
         </div>
         <div className="flex items-center gap-2">

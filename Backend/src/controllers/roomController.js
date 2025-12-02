@@ -78,13 +78,20 @@ const createRoom = async (req, res) => {
     }   
 };
 
-// Lấy danh sách phòng chat của người dùng
+// Lấy danh sách phòng chat của người dùng (Optimized - Messenger style)
 const getUserRooms = async (req, res) => {
     try {
         console.debug('getUserRooms for user:', req.user && req.user._id);
+        
+        // Chỉ populate thông tin cần thiết (không populate hết members)
         const rooms = await Room.find({ members: req.user._id })
-            .populate('creator members admins', '-password')
-            .sort({ updatedAt: -1 });
+            .populate('creator', 'username avatar')
+            .populate('members', 'username email avatar online') // Chỉ lấy info cơ bản
+            .populate('lastMessage.sender', 'username avatar')
+            .select('-participantSettings') // Không trả về settings trong list
+            .sort({ updatedAt: -1 })
+            .lean(); // Use lean() for better performance (plain JS objects)
+        
         res.json(rooms);
     }
     catch (error) {
@@ -367,6 +374,35 @@ const transferOwnership = async (req, res) => {
     }
 };
 
+// Tạo hoặc tìm direct room giữa 2 người (Optimized)
+const createDirectRoom = async (req, res) => {
+    try {
+        const { userId } = req.body; // ID của người nhận
+        
+        if (!userId) {
+            return res.status(400).json({ message: 'User ID là bắt buộc' });
+        }
+
+        if (userId === req.user._id.toString()) {
+            return res.status(400).json({ message: 'Không thể tạo tin nhắn với chính mình' });
+        }
+
+        // Dùng static method (có index optimization)
+        let room = await Room.findDirectRoom(req.user._id, userId);
+
+        if (room) {
+            return res.json(room);
+        }
+
+        // Tạo direct room mới
+        room = await Room.createDirectRoom(req.user._id, userId);
+        res.status(201).json(room);
+    } catch (error) {
+        console.error('createDirectRoom error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     createRoom,
     getRooms: getUserRooms,
@@ -376,5 +412,6 @@ module.exports = {
     removeMember: removeRoomMember,
     deleteRoom,
     uploadRoomAvatar,
-    transferOwnership
+    transferOwnership,
+    createDirectRoom
 };

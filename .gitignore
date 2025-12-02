@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Internal documentation (không public)
+SYSTEM_FEATURES.md
+OPTIMIZATION_GUIDE.md
+COMPARISON.md
+DIRECT_MESSAGING_REVIEW.md
+
+# Build outputs
+dist/
+build/
+.cache/
+
+# Testing
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
