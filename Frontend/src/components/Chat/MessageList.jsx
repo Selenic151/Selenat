@@ -116,21 +116,30 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
 
   // Build grouped message structure (group consecutive messages by same sender)
   const items = useMemo(() => {
+    console.log('Building items from messages:', messages.length, 'messages');
     const result = [];
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
       if (!msg) continue; // skip null/undefined entries
+      
+      // System messages don't need grouping logic
+      if (msg.isSystem) {
+        console.log('Found system message:', msg);
+        result.push({ msg, isSystem: true });
+        continue;
+      }
+      
       const prev = messages[i - 1];
       const next = messages[i + 1];
       const senderId = msg?.sender?._id || msg?.sender?.id || (msg.sender || '').toString();
-      const prevSenderId = prev ? (prev?.sender?._id || prev?.sender?.id || (prev.sender || '').toString()) : null;
-      const nextSenderId = next ? (next?.sender?._id || next?.sender?.id || (next.sender || '').toString()) : null;
+      const prevSenderId = prev && !prev.isSystem ? (prev?.sender?._id || prev?.sender?.id || (prev.sender || '').toString()) : null;
+      const nextSenderId = next && !next.isSystem ? (next?.sender?._id || next?.sender?.id || (next.sender || '').toString()) : null;
       const isFirstInGroup = senderId !== prevSenderId;
       const isLastInGroup = senderId !== nextSenderId;
       const isOwn = user && senderId === String(user._id);
       // Date separator: if first message or different day from previous
       const showDate = (() => {
-        if (!prev) return true;
+        if (!prev || prev.isSystem) return true;
         const d1 = new Date(prev.createdAt).toDateString();
         const d2 = new Date(msg.createdAt).toDateString();
         return d1 !== d2;
@@ -144,6 +153,20 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
   const itemContent = useCallback((index) => {
     const it = items[index];
     if (!it) return null;
+
+    // System message (member joined/left)
+    if (it.msg.isSystem) {
+      console.log('Rendering system message:', it.msg);
+      return (
+        <div className="relative px-4 mb-2">
+          <div className="w-full flex justify-center">
+            <div className={`text-xs px-3 py-1.5 rounded-full ${isDark ? 'bg-gray-800/50 text-gray-400' : 'bg-gray-100 text-gray-500'} italic`}>
+              {it.msg.content}
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="relative px-4">

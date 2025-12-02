@@ -193,6 +193,11 @@ const ChatPage = () => {
     loadUnreadCount();
   };
 
+  const handleStartResize = () => {
+    console.log('handleStartResize called');
+    setIsResizing(true);
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100">
       {/* Sidebar */}
@@ -357,6 +362,14 @@ const ChatPage = () => {
             </button>
           </div>
         )}
+
+        {/* Resize Handle */}
+        <div
+          className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 transition-colors z-10 group"
+          onMouseDown={handleStartResize}
+        >
+          <div className="absolute top-1/2 -translate-y-1/2 -right-0.5 w-1.5 h-16 bg-gray-300 rounded-full group-hover:bg-blue-500 group-hover:w-2 transition-all shadow-sm"></div>
+        </div>
       </div>
 
       {/* Chat Window */}

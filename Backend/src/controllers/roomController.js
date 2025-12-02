@@ -140,7 +140,7 @@ const updateRoom = async (req, res) => {
 // add thành viên vào phòng chat
 const addRoomMember = async (req, res) => {
     try {
-        const room = await Room.findById(req.params.id);
+        const room = await Room.findById(req.params.id).populate('members', 'username');
         if (!room) {
             return res.status(404).json({ message: 'Phòng không tồn tại' });
         }
@@ -159,6 +159,20 @@ const addRoomMember = async (req, res) => {
         room.members.push(req.body.userId);
         await room.save();
         await room.populate('creator members admins', '-password');
+
+        // Emit socket event for member joining
+        const io = req.app.get('io');
+        if (io) {
+            // Find the user who joined
+            const joinedUser = room.members.find(m => m._id.toString() === userId);
+            if (joinedUser) {
+                io.to(room._id.toString()).emit('member:joined', {
+                    roomId: room._id.toString(),
+                    userId: userId,
+                    username: joinedUser.username
+                });
+            }
+        }
 
         res.json(room);
     }   catch (error) {
@@ -268,6 +282,18 @@ const removeRoomMember = async (req, res) => {
             }
             
             return res.json({ message: 'Phòng đã bị xóa do không còn thành viên', deleted: true });
+        }
+
+        // Emit socket event for member leaving BEFORE saving (so user is still in room to receive it)
+        const io = req.app.get('io');
+        if (io) {
+            const username = req.user.username || 'User';
+            console.log('Emitting member:left event:', { roomId: room._id.toString(), userId, username });
+            io.to(room._id.toString()).emit('member:left', {
+                roomId: room._id.toString(),
+                userId: userId,
+                username: username
+            });
         }
 
         await room.save();

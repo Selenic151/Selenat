@@ -160,6 +160,16 @@ const acceptNotification = async (req, res) => {
     // Emit socket events
     const io = req.app.get('io');
     if (io) {
+      // Emit member:joined event to the room
+      if (room) {
+        console.log('Emitting member:joined event:', { roomId: room._id.toString(), userId: req.user._id.toString(), username: req.user.username });
+        io.to(room._id.toString()).emit('member:joined', {
+          roomId: room._id.toString(),
+          userId: req.user._id.toString(),
+          username: req.user.username
+        });
+      }
+
       // Notify the inviter
       const onlineUsers = req.app.get('onlineUsers') || new Map();
       const inviterSocketId = onlineUsers.get(notification.from.toString());

@@ -166,13 +166,49 @@ const ChatWindow = ({ room }) => {
       }
     };
 
+    const handleMemberJoined = ({ roomId, username }) => {
+      console.log('member:joined received:', { roomId, username, currentRoomId: room._id });
+      if (roomId === room._id) {
+        // Add system message
+        const systemMsg = {
+          _id: `system-join-${Date.now()}`,
+          type: 'system',
+          content: `${username} đã tham gia nhóm`,
+          createdAt: new Date().toISOString(),
+          isSystem: true
+        };
+        console.log('Adding join system message:', systemMsg);
+        setMessages(prev => [...prev, systemMsg]);
+      }
+    };
+
+    const handleMemberLeft = ({ roomId, username }) => {
+      console.log('member:left received:', { roomId, username, currentRoomId: room._id });
+      if (roomId === room._id) {
+        // Add system message
+        const systemMsg = {
+          _id: `system-leave-${Date.now()}`,
+          type: 'system',
+          content: `${username} đã rời khỏi nhóm`,
+          createdAt: new Date().toISOString(),
+          isSystem: true
+        };
+        console.log('Adding leave system message:', systemMsg);
+        setMessages(prev => [...prev, systemMsg]);
+      }
+    };
+
     socket?.on('message:received', handleIncoming);
     socket?.on('room:deleted', onRoomDeleted);
+    socket?.on('member:joined', handleMemberJoined);
+    socket?.on('member:left', handleMemberLeft);
 
     return () => {
       leaveRoom(room._id);
       socket?.off('message:received', handleIncoming);
       socket?.off('room:deleted', onRoomDeleted);
+      socket?.off('member:joined', handleMemberJoined);
+      socket?.off('member:left', handleMemberLeft);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room, socket, joinRoom, leaveRoom]);
