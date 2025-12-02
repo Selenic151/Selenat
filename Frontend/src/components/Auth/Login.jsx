@@ -223,7 +223,10 @@ const Login = () => {
               <span>Tiếp tục với Facebook</span>
             </button>
           </div>
-
+<div className="bg-red-500 p-10">
+    {/* Nội dung Login.jsx */}
+    <h1>Dị ó hỏ</h1>
+</div>
           {/* Register Link */}
           <p className="text-gray-500 text-sm mt-6">
             Chưa có tài khoản?{' '}
