@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**Ứng dụng chat thời gian thực hiện đại với giao diện đẹp mắt**
+**Ứng dụng chat thời gian thực**
 
 [Tính năng](#-tính-năng) • [Demo](#-demo) • [Cài đặt](#-cài-đặt) • [Sử dụng](#-sử-dụng) • [Đóng góp](#-đóng-góp)
 
