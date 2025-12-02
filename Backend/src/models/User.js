@@ -4,22 +4,29 @@ const bcrypt = require('bcryptjs');
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
-    required: true,
+    required: [true, 'Please provide a username'],
     unique: true,
     trim: true,
-    minlength: 3
+    minlength: [3, 'Username must be at least 3 characters']
   },
   email: {
     type: String,
-    required: true,
+    required: [true, 'Please provide an email'],
     unique: true,
     lowercase: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+  },
+  phone: {
+    type: String,
+    unique: true,
+    sparse: true,
     trim: true
   },
   password: {
     type: String,
-    required: true,
-    minlength: 6
+    required: [true, 'Please provide a password'],
+    minlength: [6, 'Password must be at least 6 characters'],
+    select: false
   },
   role: {
     type: String,
@@ -28,7 +35,7 @@ const userSchema = new mongoose.Schema({
   },
   avatar: {
     type: String,
-    default: 'https://via.placeholder.com/150'
+    default: ''
   },
   isOnline: {
     type: Boolean,
@@ -42,16 +49,17 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Hash password trước khi save
+// Hash password before saving
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {
     return next();
   }
+
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Method để so sánh password
+// Method to compare password
 userSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

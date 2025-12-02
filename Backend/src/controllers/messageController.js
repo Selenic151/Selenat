@@ -1,127 +1,120 @@
 const Message = require('../models/Message');
 const Room = require('../models/Room');
 
-// desc Get messages in a room with pagination
-// route GET /api/messages/room/:roomId
-// access Private
-const getMessagesInRoom = async (req, res) => {
-    try {
-        const { roomId } = req.params;
-        const { limit = 20, skip = 0 } = req.query;
+// @desc    Get messages for a room
+// @route   GET /api/messages/:roomId
+// @access  Private
+const getMessages = async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const { limit = 50, before } = req.query;
 
-        // Kiểm tra xem người dùng có phải thành viên của phòng không   
-        const room = await Room.findById(roomId);
-        if (!room) {
-            return res.status(404).json({ message: 'Phòng không tồn tại' });
-        }
-
-        if (!room.members.includes(req.user._id)) {
-            return res.status(403).json({ message: 'Truy cập bị từ chối, bạn không phải thành viên của phòng này' });
-        }   
-        // Lấy tin nhắn với phân trang
-        const messages = await Message.find({ room: roomId })
-            .sort({ createdAt: -1 })
-            .skip(parseInt(skip))
-            .limit(parseInt(limit))
-            .populate('sender', '-password')
-            .exec();
-        res.json(messages);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+    // Check if user is a member of the room
+    const room = await Room.findById(roomId);
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
     }
+
+    const isMember = room.members.some(
+      memberId => memberId.toString() === req.user._id.toString()
+    );
+
+    if (!isMember) {
+      return res.status(403).json({ message: 'Not a member of this room' });
+    }
+
+    // Build query
+    const query = { room: roomId };
+    if (before) {
+      query.createdAt = { $lt: new Date(before) };
+    }
+
+    // Get messages
+    const messages = await Message.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .populate('sender', 'username avatar')
+      .populate('readBy.user', 'username');
+
+    res.json(messages.reverse());
+  } catch (error) {
+    console.error('Get messages error:', error);
+    res.status(500).json({ message: error.message });
+  }
 };
 
-// @desc Create a new message in a room
-// @route POST /api/messages/room/:roomId
-// @access Private
-const createMessageInRoom = async (req, res) => {
-    try {
-        const { roomId, content, type } = req.body;
-        
-        // kieem tra phong
-        const room = await Room.findById(roomId);
-        if (!room) {
-            return res.status(404).json({ message: 'Phòng không tồn tại' });
-        }
-        if (!room.members.includes(req.user._id)) {
-            return res.status(403).json({ message: 'Truy cập bị từ chối, bạn không phải thành viên của phòng này' });
-        }
+// @desc    Create a message
+// @route   POST /api/messages
+// @access  Private
+const createMessage = async (req, res) => {
+  try {
+    const { roomId, content, type = 'text' } = req.body;
 
-        // tao tin nhan
-        const message = await Message.create({
-            room: roomId,
-            sender: req.user._id,
-            content,
-            type: type || 'text'    
-        });
-
-        await message.populate('sender', '-password');
-
-        // cap nhat phong
-        room.updatedAt = Date.now();
-        await room.save();
-
-        res.status(201).json(message);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+    // Check if user is a member of the room
+    const room = await Room.findById(roomId);
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
     }
+
+    const isMember = room.members.some(
+      memberId => memberId.toString() === req.user._id.toString()
+    );
+
+    if (!isMember) {
+      return res.status(403).json({ message: 'Not a member of this room' });
+    }
+
+    // Create message
+    const message = await Message.create({
+      room: roomId,
+      sender: req.user._id,
+      content,
+      type
+    });
+
+    // Populate sender info
+    await message.populate('sender', 'username avatar');
+
+    res.status(201).json(message);
+  } catch (error) {
+    console.error('Create message error:', error);
+    res.status(500).json({ message: error.message });
+  }
 };
 
-// @desc Mark message as read
-// @route POST /api/messages/:messageId/read
-// @access Private
+// @desc    Mark message as read
+// @route   PUT /api/messages/:id/read
+// @access  Private
 const markAsRead = async (req, res) => {
   try {
     const message = await Message.findById(req.params.id);
 
     if (!message) {
-      return res.status(404).json({ message: 'Không tìm thấy message' });
+      return res.status(404).json({ message: 'Message not found' });
     }
 
-    // Kiểm tra user đã đọc chưa
+    // Check if already read by user
     const alreadyRead = message.readBy.some(
-      read => read.user.toString() === req.user._id.toString()
+      r => r.user.toString() === req.user._id.toString()
     );
 
     if (!alreadyRead) {
-      message.readBy.push({ user: req.user._id });
+      message.readBy.push({
+        user: req.user._id,
+        timestamp: new Date()
+      });
       await message.save();
     }
 
     res.json(message);
   } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-
-// @desc    Delete message
-// @route   DELETE /api/messages/:id
-// @access  Private
-const deleteMessage = async (req, res) => {
-  try {
-    const message = await Message.findById(req.params.id);
-
-    if (!message) {
-      return res.status(404).json({ message: 'Không tìm thấy message' });
-    }
-
-    // Chỉ sender hoặc admin mới có thể xóa
-    if (message.sender.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Bạn không có quyền xóa message này' });
-    }
-
-    await message.deleteOne();
-
-    res.json({ message: 'Message đã được xóa' });
-  } catch (error) {
+    console.error('Mark as read error:', error);
     res.status(500).json({ message: error.message });
   }
 };
 
 module.exports = {
-  getMessages: getMessagesInRoom,
-  createMessage: createMessageInRoom,
-  markAsRead,
-  deleteMessage
+  getMessages,
+  createMessage,
+  markAsRead
 };

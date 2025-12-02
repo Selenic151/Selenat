@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Notifications from '../Notification/Notifications';
+import { notificationAPI } from '../../services/api';
+import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,6 +9,41 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { socket, on, off } = useSocket();
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await notificationAPI.getNotifications();
+        setUnreadCount(res.data.filter(n => n.status === 'pending').length);
+      } catch (err) {
+        console.error('Error loading notifications', err);
+      }
+    };
+    load();
+  }, []);
+
+  // reload when opening notifications to refresh count
+  useEffect(() => {
+    if (!showNotifications) return;
+    (async () => {
+      try {
+        const res = await notificationAPI.getNotifications();
+        setUnreadCount(res.data.filter(n => n.status === 'pending').length);
+      } catch (err) { console.error(err); }
+    })();
+  }, [showNotifications]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const receivedHandler = () => setUnreadCount(c => c + 1);
+    const acceptedHandler = () => setUnreadCount(c => c - 1 > 0 ? c - 1 : 0);
+    on('invitation:received', receivedHandler);
+    on('invitation:accepted', acceptedHandler);
+    return () => { off('invitation:received', receivedHandler); off('invitation:accepted', acceptedHandler); };
+  }, [socket, on, off]);
 
   const handleLogout = async () => {
     await logout();
@@ -15,6 +53,26 @@ const Navbar = () => {
   return (
     <nav className="bg-gradient-to-r from-blue-500 via-purple-600 to-blue-700 border-b border-white/20 px-6 py-4 flex items-center justify-between shadow-lg backdrop-blur-sm">
       <div className="flex items-center space-x-4">
+        {/* Notifications Button */}
+        <div className="relative">
+          <button
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="p-2 rounded-full hover:bg-white/10"
+            title="Thông báo"
+          >
+            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118.6 14.6V11a6 6 0 10-12 0v3.6c0 .538-.214 1.055-.595 1.445L4 17h11z" />
+            </svg>
+            {unreadCount > 0 && (
+              <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full transform translate-x-1/3 -translate-y-1/3">{unreadCount}</span>
+            )}
+          </button>
+          {showNotifications && (
+            <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 py-3 z-50 overflow-hidden">
+              <Notifications />
+            </div>
+          )}
+        </div>
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

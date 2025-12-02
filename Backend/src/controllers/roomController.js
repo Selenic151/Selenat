@@ -1,20 +1,52 @@
 const Room = require("../models/Room");
 const Message = require("../models/Message");
+const Notification = require('../models/Notification');
 
 // Tạo phòng chat mới
 const createRoom = async (req, res) => {
     try {
-        const { name, description, type, members } = req.body;
+        const { name, description, type, invitedMembers } = req.body; // invitedMembers: array of userIds
         // Tạo phòng mới với creator là người dùng hiện tại và member
         const room = await Room.create({
             name,
             description,
             type: type || 'group',
             creator: req.user._id,
-            members: [req.user._id, ...members || []],    
+            members: [req.user._id],    
             admins: [req.user._id]
         });
         await room.populate('creator members admins', '- password');
+
+        // Create notification invites for invitedMembers
+        const notifications = [];
+        if (invitedMembers && Array.isArray(invitedMembers)) {
+            for (const uid of invitedMembers) {
+                const notification = await Notification.create({
+                    type: 'invite',
+                    from: req.user._id,
+                    to: uid,
+                    room: room._id,
+                    message: `Bạn được mời tham gia phòng ${room.name}`,
+                    status: 'pending'
+                });
+                notifications.push(notification);
+            }
+        }
+
+        // Emit real-time event for newly created room
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('room:created', room);
+            // Notify invited users
+            const onlineUsers = req.app.get('onlineUsers');
+            if (onlineUsers) {
+                notifications.forEach(n => {
+                    const sid = onlineUsers.get(n.to.toString());
+                    if (sid) io.to(sid).emit('invitation:received', n);
+                });
+            }
+        }
+
         res.status(201).json(room);        
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -152,6 +184,27 @@ const removeRoomMember = async (req, res) => {
     }
 };
 
+// Upload avatar for room
+const uploadRoomAvatar = async (req, res) => {
+    try {
+        const room = await Room.findById(req.params.id);
+        if (!room) return res.status(404).json({ message: 'Phòng không tồn tại' });
+        // check admin
+        if (!room.admins.some(adminId => adminId.toString() === req.user._id.toString())) {
+            return res.status(403).json({ message: 'Bạn không có quyền cập nhật avatar' });
+        }
+        if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+        // Update avatar path
+        room.avatar = `/uploads/rooms/${req.file.filename}`;
+        await room.save();
+        await room.populate('creator members admins', '- password');
+        res.json(room);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     createRoom,
     getRooms: getUserRooms,
@@ -159,5 +212,6 @@ module.exports = {
     updateRoom,
     addMember: addRoomMember,
     removeMember: removeRoomMember,
-    deleteRoom
+    deleteRoom,
+    uploadRoomAvatar
 };

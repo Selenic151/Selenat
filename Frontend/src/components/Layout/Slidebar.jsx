@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSocket } from '../../context/SocketContext';
 import { roomAPI } from '../../services/api';
 import RoomList from '../Room/RoomList';
 import CreateRoom from '../Room/CreateRoom';
@@ -31,12 +32,37 @@ const Sidebar = ({ selectedRoom, onSelectRoom }) => {
     loadRooms();
   }, [loadRooms]);
 
+  // Real-time update when a new room is created by other users
+  const { socket, on, off, joinRoom } = useSocket();
+  useEffect(() => {
+    if (!socket) return;
+
+    const createdHandler = (newRoom) => {
+      setRooms(prev => [newRoom, ...prev]);
+    };
+    const updatedHandler = (updatedRoom) => {
+      setRooms(prev => {
+        const exists = prev.find(r => r._id === updatedRoom._id);
+        if (exists) return prev.map(r => r._id === updatedRoom._id ? updatedRoom : r);
+        return [updatedRoom, ...prev];
+      });
+    };
+
+    on('room:created', createdHandler);
+    on('room:updated', updatedHandler);
+    return () => { off('room:created', createdHandler); off('room:updated', updatedHandler); };
+  }, [socket, on, off]);
+
   const handleCreateRoom = async (roomData) => {
     try {
       const response = await roomAPI.createRoom(roomData);
       setRooms([response.data, ...rooms]);
       setShowCreateRoom(false);
       onSelectRoom(response.data);
+      // Join the newly created room via socket
+      if (socket) {
+        joinRoom(response.data._id);
+      }
     } catch (error) {
       console.error('Error creating room:', error);
       alert('Không thể tạo room: ' + error.response?.data?.message);

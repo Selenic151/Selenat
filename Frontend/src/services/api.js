@@ -37,9 +37,19 @@ export const roomAPI = {
   getRoomById: (id) => api.get(`/rooms/${id}`),
   createRoom: (data) => api.post('/rooms', data),
   updateRoom: (id, data) => api.put(`/rooms/${id}`, data),
+  uploadRoomAvatar: (id, formData) => api.put(`/rooms/${id}/avatar`, formData, { headers: { 'Content-Type': 'multipart/form-data' }}),
   deleteRoom: (id) => api.delete(`/rooms/${id}`),
   addMember: (id, userId) => api.post(`/rooms/${id}/members`, { userId }),
   removeMember: (id, userId) => api.delete(`/rooms/${id}/members/${userId}`),
+};
+
+// Notifications API
+export const notificationAPI = {
+  getNotifications: () => api.get('/notifications'),
+  accept: (id) => api.post(`/notifications/${id}/accept`),
+  decline: (id) => api.post(`/notifications/${id}/decline`),
+  invite: (data) => api.post('/notifications/invite', data),
+  markRead: (id) => api.put(`/notifications/${id}/read`)
 };
 
 // Message API

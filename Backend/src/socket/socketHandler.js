@@ -1,14 +1,16 @@
-// src/socket/socketHandler.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const Message = require('../models/Message');
 const Room = require('../models/Room');
+const Message = require('../models/Message');
 
-// Store online users
+// Track online users: Map<userId, socketId>
 const onlineUsers = new Map();
 
-const socketHandler = (io) => {
-  // Middleware xác thực socket
+module.exports = (io, app) => {
+  // Make onlineUsers accessible to other parts of the app
+  app.set('onlineUsers', onlineUsers);
+
+  // Socket.io authentication middleware
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth.token;
@@ -19,11 +21,12 @@ const socketHandler = (io) => {
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await User.findById(decoded.id).select('-password');
-
+      
       if (!user) {
         return next(new Error('User not found'));
       }
 
+      socket.userId = user._id.toString();
       socket.user = user;
       next();
     } catch (error) {
@@ -31,128 +34,131 @@ const socketHandler = (io) => {
     }
   });
 
-  io.on('connection', async (socket) => {
-    console.log(`User connected: ${socket.user.username}`);
+  io.on('connection', (socket) => {
+    console.log(`User connected: ${socket.userId}`);
 
-    // Thêm user vào map online users
-    onlineUsers.set(socket.user._id.toString(), socket.id);
+    // Track online user
+    onlineUsers.set(socket.userId, socket.id);
+    
+    // Update user online status
+    User.findByIdAndUpdate(socket.userId, { isOnline: true }).catch(err => 
+      console.error('Error updating online status:', err)
+    );
 
-    // Update user status
-    await User.findByIdAndUpdate(socket.user._id, {
-      isOnline: true,
-      lastSeen: new Date()
-    });
+    // Broadcast online status
+    io.emit('user:online', { userId: socket.userId });
 
-    // Emit user online status
-    io.emit('user:online', {
-      userId: socket.user._id,
-      username: socket.user.username
-    });
-
-    // Join rooms
+    // Join user's rooms
     socket.on('room:join', async (roomId) => {
       try {
         const room = await Room.findById(roomId);
         
-        if (room && room.members.includes(socket.user._id)) {
-          socket.join(roomId);
-          console.log(`${socket.user.username} joined room: ${roomId}`);
-          
-          // Notify others in room
-          socket.to(roomId).emit('user:joined', {
-            userId: socket.user._id,
-            username: socket.user.username,
-            roomId
-          });
+        if (!room) {
+          return socket.emit('error', { message: 'Room not found' });
         }
+
+        // Check if user is a member
+        const isMember = room.members.some(
+          memberId => memberId.toString() === socket.userId
+        );
+
+        if (!isMember) {
+          return socket.emit('error', { message: 'Not a member of this room' });
+        }
+
+        socket.join(roomId);
+        socket.emit('room:joined', { roomId });
       } catch (error) {
         console.error('Error joining room:', error);
+        socket.emit('error', { message: 'Failed to join room' });
       }
     });
 
     // Leave room
     socket.on('room:leave', (roomId) => {
       socket.leave(roomId);
-      socket.to(roomId).emit('user:left', {
-        userId: socket.user._id,
-        username: socket.user.username,
-        roomId
-      });
+      socket.emit('room:left', { roomId });
     });
 
     // Send message
     socket.on('message:send', async (data) => {
       try {
-        const { roomId, content, type } = data;
+        const { roomId, content, type = 'text' } = data;
 
-        // Kiểm tra room và member
         const room = await Room.findById(roomId);
-        
-        if (!room || !room.members.includes(socket.user._id)) {
-          return socket.emit('error', { message: 'Invalid room or not a member' });
+        if (!room) {
+          return socket.emit('error', { message: 'Room not found' });
         }
 
-        // Tạo message
+        // Check if user is a member
+        const isMember = room.members.some(
+          memberId => memberId.toString() === socket.userId
+        );
+
+        if (!isMember) {
+          return socket.emit('error', { message: 'Not a member of this room' });
+        }
+
+        // Create message
         const message = await Message.create({
           room: roomId,
-          sender: socket.user._id,
+          sender: socket.userId,
           content,
-          type: type || 'text'
+          type
         });
 
-        await message.populate('sender', '-password');
+        // Populate sender info
+        await message.populate('sender', 'username avatar');
 
-        // Update room
-        room.updatedAt = new Date();
-        await room.save();
-
-        // Emit to room
-        io.to(roomId).emit('message:new', message);
+        // Broadcast to room
+        io.to(roomId).emit('message:received', message);
       } catch (error) {
         console.error('Error sending message:', error);
-        socket.emit('error', { message: 'Error sending message' });
+        socket.emit('error', { message: 'Failed to send message' });
       }
     });
 
     // Typing indicator
-    socket.on('typing:start', (data) => {
-      socket.to(data.roomId).emit('user:typing', {
-        userId: socket.user._id,
-        username: socket.user.username,
-        roomId: data.roomId
+    socket.on('typing:start', ({ roomId }) => {
+      socket.to(roomId).emit('user:typing', {
+        userId: socket.userId,
+        username: socket.user.username
       });
     });
 
-    socket.on('typing:stop', (data) => {
-      socket.to(data.roomId).emit('user:stop-typing', {
-        userId: socket.user._id,
-        roomId: data.roomId
+    socket.on('typing:stop', ({ roomId }) => {
+      socket.to(roomId).emit('user:stopped_typing', {
+        userId: socket.userId
       });
     });
 
     // Mark message as read
-    socket.on('message:read', async (data) => {
+    socket.on('message:read', async ({ messageId, roomId }) => {
       try {
-        const { messageId, roomId } = data;
-        
         const message = await Message.findById(messageId);
         
-        if (message) {
-          const alreadyRead = message.readBy.some(
-            read => read.user.toString() === socket.user._id.toString()
-          );
-
-          if (!alreadyRead) {
-            message.readBy.push({ user: socket.user._id });
-            await message.save();
-
-            // Emit to room
-            io.to(roomId).emit('message:read', {
-              messageId,
-              userId: socket.user._id
-            });
-          }
+        if (!message) {
+          return socket.emit('error', { message: 'Message not found' });
         }
+
+        // Add user to readBy if not already there
+        const alreadyRead = message.readBy.some(
+          r => r.user.toString() === socket.userId
+        );
+
+        if (!alreadyRead) {
+          message.readBy.push({
+            user: socket.userId,
+            timestamp: new Date()
+          });
+          await message.save();
+        }
+
+        // Notify room
+        io.to(roomId).emit('message:read_update', {
+          messageId,
+          userId: socket.userId
+        });
       } catch (error) {
         console.error('Error marking message as read:', error);
       }
@@ -160,24 +166,28 @@ const socketHandler = (io) => {
 
     // Disconnect
     socket.on('disconnect', async () => {
-      console.log(`User disconnected: ${socket.user.username}`);
+      console.log(`User disconnected: ${socket.userId}`);
       
       // Remove from online users
-      onlineUsers.delete(socket.user._id.toString());
+      onlineUsers.delete(socket.userId);
 
       // Update user status
-      await User.findByIdAndUpdate(socket.user._id, {
-        isOnline: false,
-        lastSeen: new Date()
-      });
+      try {
+        await User.findByIdAndUpdate(socket.userId, {
+          isOnline: false,
+          lastSeen: new Date()
+        });
 
-      // Emit user offline status
-      io.emit('user:offline', {
-        userId: socket.user._id,
-        username: socket.user.username
-      });
+        // Broadcast offline status
+        io.emit('user:offline', {
+          userId: socket.userId,
+          lastSeen: new Date()
+        });
+      } catch (error) {
+        console.error('Error updating offline status:', error);
+      }
     });
   });
-};
 
-module.exports = socketHandler;
+  return io;
+};

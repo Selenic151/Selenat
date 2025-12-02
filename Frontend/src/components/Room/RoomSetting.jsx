@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { roomAPI } from '../../services/api';
+import { roomAPI, userAPI, notificationAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 const RoomSettings = ({ room, onClose, onUpdate }) => {
@@ -9,6 +9,10 @@ const RoomSettings = ({ room, onClose, onUpdate }) => {
     description: room.description || '',
   });
   const [loading, setLoading] = useState(false);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
 
   const isAdmin = room.admins.some((admin) => admin._id === user._id);
   const isCreator = room.creator._id === user._id;
@@ -22,8 +26,15 @@ const RoomSettings = ({ room, onClose, onUpdate }) => {
     setLoading(true);
 
     try {
-      const response = await roomAPI.updateRoom(room._id, formData);
-      onUpdate(response.data);
+      await roomAPI.updateRoom(room._id, formData);
+      // If avatar file was selected upload it
+      if (avatarFile) {
+        const form = new FormData();
+        form.append('avatar', avatarFile);
+        await roomAPI.uploadRoomAvatar(room._id, form);
+      }
+      const updated = (await roomAPI.getRoomById(room._id)).data;
+      onUpdate(updated);
       onClose();
     } catch (error) {
       console.error('Error updating room:', error);
@@ -85,6 +96,67 @@ const RoomSettings = ({ room, onClose, onUpdate }) => {
               />
             </div>
 
+            {/* Invite Members */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Thêm thành viên (email hoặc phone)</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm user..."
+                  value={searchQuery}
+                  onChange={async (e) => {
+                    setSearchQuery(e.target.value);
+                    if (e.target.value.length < 2) {
+                      setSearchResults([]);
+                      return;
+                    }
+                    try {
+                      const res = await userAPI.searchUsers(e.target.value);
+                      setSearchResults(res.data);
+                    } catch (err) { console.error(err); }
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {searchResults.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    {searchResults.map(u => (
+                      <div key={u._id} onClick={() => {
+                        if (!selectedUsers.find(s => s._id === u._id)) setSelectedUsers([...selectedUsers, u]);
+                        setSearchQuery(''); setSearchResults([]);
+                      }} className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center space-x-2">
+                        <img src={u.avatar} alt={u.username} className="w-8 h-8 rounded-full" />
+                        <div>
+                          <p className="font-medium">{u.username}</p>
+                          <p className="text-xs text-gray-500">{u.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {selectedUsers.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {selectedUsers.map(u => (
+                    <div key={u._id} className="flex items-center space-x-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+                      <span className="text-sm">{u.username}</span>
+                      <button type="button" onClick={() => setSelectedUsers(selectedUsers.filter(s => s._id !== u._id))} className="hover:text-blue-900">×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {selectedUsers.length > 0 && (
+                <div className="mt-2">
+                  <button type="button" className="px-4 py-2 bg-green-500 text-white rounded" onClick={async () => {
+                    try {
+                      await notificationAPI.invite({ roomId: room._id, userIds: selectedUsers.map(u => u._id) });
+                      setSelectedUsers([]);
+                      alert('Đã gửi lời mời');
+                    } catch (err) { console.error(err); alert('Gửi lời mời thất bại'); }
+                  }}>Gửi lời mời</button>
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-2">Mô tả</label>
               <textarea
@@ -96,6 +168,10 @@ const RoomSettings = ({ room, onClose, onUpdate }) => {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-2">Avatar Room</label>
+              <input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files[0])} />
+            </div>
             <div className="pt-4 space-y-2">
               <button
                 type="submit"

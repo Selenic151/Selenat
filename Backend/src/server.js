@@ -11,9 +11,14 @@ const authRoutes = require('./routes/auth');
 const roomRoutes = require('./routes/room');
 const messageRoutes = require('./routes/message');
 const userRoutes = require('./routes/user');
+const notificationRoutes = require('./routes/notification');
 
 const app = express();
 const httpServer = createServer(app);
+
+const path = require('path');
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // Socket.io setup
 const io = new Server(httpServer, {
@@ -45,9 +50,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Socket.io handler
-socketHandler(io);
+socketHandler(io, app);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -60,6 +66,13 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (require.main === module) {
+  httpServer.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+// Make io accessible from controllers via req.app.get('io')
+app.set('io', io);
+
+module.exports = app; // Export app for testing

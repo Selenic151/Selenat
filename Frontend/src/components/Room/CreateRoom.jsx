@@ -51,7 +51,7 @@ const CreateRoom = ({ onClose, onCreate }) => {
     try {
       const roomData = {
         ...formData,
-        members: selectedUsers.map((u) => u._id),
+        invitedMembers: selectedUsers.map((u) => u._id),
       };
       await onCreate(roomData);
     } catch (error) {

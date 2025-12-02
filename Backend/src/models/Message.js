@@ -13,8 +13,7 @@ const messageSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: true,
-    trim: true
+    required: [true, 'Message content is required']
   },
   type: {
     type: String,
@@ -26,7 +25,7 @@ const messageSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
     },
-    readAt: {
+    timestamp: {
       type: Date,
       default: Date.now
     }
@@ -35,7 +34,8 @@ const messageSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index để tìm kiếm nhanh
+// Index for faster queries
 messageSchema.index({ room: 1, createdAt: -1 });
+messageSchema.index({ sender: 1 });
 
 module.exports = mongoose.model('Message', messageSchema);
