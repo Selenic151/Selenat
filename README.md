@@ -1,324 +1,285 @@
-# 💬 Selenat Chat
+# Selenat Chat
 
-<div align="center">
+Ứng dụng chat thời gian thực với React, Node.js, MongoDB và Socket.io.
 
-**Ứng dụng chat thời gian thực**
+## Giới thiệu
 
+Selenat Chat là ứng dụng nhắn tin real-time hỗ trợ chat 1-1, chat nhóm, hệ thống bạn bè và thông báo. Được xây dựng với các công nghệ web hiện đại, tập trung vào hiệu suất và trải nghiệm người dùng.
 
+## Tính năng
 
-</div>
+**Xác thực & Người dùng**
+- Đăng ký, đăng nhập với JWT authentication
+- Quản lý profile, avatar
+- Hiển thị trạng thái online/offline
+- Tìm kiếm và quản lý bạn bè
 
----
+**Nhắn tin**
+- Chat 1-1 (Direct Messages)
+- Chat nhóm (Group Chats)
+- Gửi/nhận tin nhắn real-time
+- Hiển thị typing indicator
+- System messages (user join/leave)
+- Virtual scrolling cho hiệu suất tốt
 
-## 📋 Mục lục
+**Quản lý Phòng**
+- Tạo phòng chat (group, private, direct)
+- Thêm/xóa thành viên
+- Phân quyền admin
+- Upload avatar phòng
+- Chuyển quyền sở hữu
 
-- [Giới thiệu](#-giới-thiệu)
-- [Tính năng](#-tính-năng)
-- [Tech Stack](#-tech-stack)
-- [Cài đặt](#-cài-đặt)
-- [Sử dụng](#-sử-dụng)
-- [Cấu trúc dự án](#-cấu-trúc-dự-án)
-- [Screenshots](#-screenshots)
-- [Đóng góp](#-đóng-góp)
-- [License](#-license)
+**Thông báo**
+- Lời mời tham gia phòng
+- Lời mời kết bạn
+- Badge hiển thị số lượng chưa đọc
+- Cập nhật real-time
 
-## 🌟 Giới thiệu
+## Tech Stack
 
-**Selenat Chat** là một ứng dụng chat thời gian thực được xây dựng với công nghệ hiện đại, mang đến trải nghiệm trò chuyện mượt mà và giao diện người dùng đẹp mắt. Dự án này được phát triển như một nền tảng học tập và demo các công nghệ web full-stack.
+**Frontend**
+- React 19
+- Vite
+- Tailwind CSS 4
+- Socket.io Client
+- Axios
+- React Virtuoso
 
-### ✨ Điểm nổi bật
+**Backend**
+- Node.js 22
+- Express 5
+- MongoDB
+- Mongoose 9
+- Socket.io 4
+- JWT + bcryptjs
 
-- 🎨 **Giao diện hiện đại** - Thiết kế gradient đẹp mắt với Tailwind CSS
-- ⚡ **Real-time messaging** - Chat tức thời với Socket.io
-- 🔒 **Bảo mật** - JWT Authentication & Password hashing
-- 📱 **Responsive** - Tương thích mọi thiết bị
-- 🌙 **UX tối ưu** - Smooth animations & transitions
+## Cài đặt
 
-## 🚀 Tính năng
+### Yêu cầu
 
-### Người dùng
-- ✅ Đăng ký & Đăng nhập an toàn
-- ✅ Quên mật khẩu (UI sẵn sàng)
-- ✅ Profile management
-- ✅ Avatar & status online
-- ✅ Ghi nhớ đăng nhập
-
-### Chat & Messaging
-- ✅ Tạo phòng chat nhóm
-- ✅ Gửi tin nhắn real-time
-- ✅ Typing indicators
-- ✅ Message read status
-- ✅ Emoji & rich text support
-- ✅ Message history với pagination
-- ✅ Delete messages
-
-### Phòng chat
-- ✅ Tạo & quản lý phòng
-- ✅ Thêm/xóa thành viên
-- ✅ Quyền admin phòng
-- ✅ Room settings (name, avatar, description)
-
-### Quản trị
-- ✅ Role-based access control (User/Admin)
-- ✅ User management
-- ✅ Search users
-- ✅ Statistics & monitoring
-
-## 🛠️ Tech Stack
-
-### Frontend
-```
-React 19              - UI Library
-Vite                  - Build tool & Dev server
-Tailwind CSS 4        - Styling framework
-React Router DOM 7    - Routing
-Axios                 - HTTP client
-Socket.io Client      - WebSocket client
-```
-
-### Backend
-```
-Node.js 22.x          - Runtime environment
-Express 5             - Web framework
-MongoDB               - NoSQL database
-Mongoose 9            - ODM for MongoDB
-Socket.io 4           - WebSocket server
-JWT                   - Authentication
-bcryptjs              - Password hashing
-```
-
-### DevOps & Tools
-```
-Git                   - Version control
-npm                   - Package manager
-ESLint                - Code linting
-Nodemon               - Development server
-```
-
-## 📦 Cài đặt
-
-### Yêu cầu hệ thống
-
-- Node.js >= 18.0.0
-- MongoDB >= 6.0.0
+- Node.js >= 18.0
+- MongoDB >= 6.0
 - npm hoặc yarn
 
-### Bước 1: Clone repository
-
-```bash
-git clone https://github.com/Selenic151/Selenat.git
-cd Selenat
-```
-
-### Bước 2: Cài đặt Backend
+### Backend
 
 ```bash
 cd Backend
 npm install
-```
 
-Tạo file `.env` trong thư mục Backend:
-
-```env
+# Tạo file .env
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/selenat
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
-JWT_EXPIRES_IN=30d
-CLIENT_URL=http://localhost:5174
-NODE_ENV=development
+MONGO_URI=mongodb://localhost:27017/selenat
+JWT_SECRET=your_secret_key_here
 ```
 
-### Bước 3: Cài đặt Frontend
+### Frontend
 
 ```bash
-cd ../Frontend
+cd Frontend
 npm install
 ```
 
-### Bước 4: Khởi động MongoDB
+### Chạy ứng dụng
 
-```bash
-# Windows
-mongod
-
-# Linux/macOS
-sudo systemctl start mongod
-```
-
-### Bước 5: Chạy ứng dụng
-
-**Terminal 1 - Backend:**
+**Backend:**
 ```bash
 cd Backend
 npm run dev
-# Server chạy tại http://localhost:5000
+# Server: http://localhost:5000
 ```
 
-**Terminal 2 - Frontend:**
+**Frontend:**
 ```bash
 cd Frontend
 npm run dev
-# App chạy tại http://localhost:5174
+# App: http://localhost:5173
 ```
 
-## 🎯 Sử dụng
-
-### Đăng ký tài khoản mới
-
-1. Truy cập http://localhost:5174
-2. Click "Đăng ký ngay"
-3. Điền thông tin: username, email, password
-4. Submit form
-
-### Tạo phòng chat
-
-1. Đăng nhập vào tài khoản
-2. Click nút "Tạo phòng" trên sidebar
-3. Nhập tên phòng, mô tả
-4. Thêm thành viên
-5. Tạo phòng
-
-### Gửi tin nhắn
-
-1. Chọn phòng chat từ danh sách
-2. Nhập tin nhắn vào ô input
-3. Nhấn Enter hoặc click nút gửi
-
-## 📁 Cấu trúc dự án
+## Cấu trúc Project
 
 ```
 Selenat/
 ├── Backend/
 │   ├── src/
-│   │   ├── config/
-│   │   │   └── db.js                 # MongoDB connection
-│   │   ├── controllers/
-│   │   │   ├── authController.js     # Authentication logic
-│   │   │   ├── messageController.js  # Message CRUD
-│   │   │   └── roomController.js     # Room management
-│   │   ├── middleware/
-│   │   │   ├── auth.js              # JWT verification
-│   │   │   └── roleCheck.js         # Role-based access
-│   │   ├── models/
-│   │   │   ├── User.js              # User schema
-│   │   │   ├── Room.js              # Room schema
-│   │   │   └── Message.js           # Message schema
-│   │   ├── routes/
-│   │   │   ├── auth.js              # Auth routes
-│   │   │   ├── room.js              # Room routes
-│   │   │   ├── message.js           # Message routes
-│   │   │   └── user.js              # User routes
-│   │   ├── socket/
-│   │   │   └── socketHandler.js     # Socket.io events
-│   │   └── server.js                # Entry point
-│   ├── package.json
-│   └── .env
+│   │   ├── config/          # Cấu hình database
+│   │   ├── controllers/     # Business logic
+│   │   ├── middleware/      # Auth, role check
+│   │   ├── models/          # MongoDB schemas
+│   │   ├── routes/          # API endpoints
+│   │   ├── socket/          # Socket.io handlers
+│   │   └── server.js        # Entry point
+│   └── package.json
 │
-├── Frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Auth/
-│   │   │   │   ├── Login.jsx
-│   │   │   │   └── Register.jsx
-│   │   │   ├── Chat/
-│   │   │   │   ├── ChatWindow.jsx
-│   │   │   │   ├── MessageInput.jsx
-│   │   │   │   ├── MessageList.jsx
-│   │   │   │   └── TypingIndicator.jsx
-│   │   │   ├── Common/
-│   │   │   │   ├── Loader.jsx
-│   │   │   │   └── ProtectedRoute.jsx
-│   │   │   ├── Layout/
-│   │   │   │   ├── Navbar.jsx
-│   │   │   │   └── Sidebar.jsx
-│   │   │   └── Room/
-│   │   │       ├── RoomItem.jsx
-│   │   │       └── RoomList.jsx
-│   │   ├── context/
-│   │   │   ├── AuthContext.jsx      # Auth state management
-│   │   │   └── SocketContext.jsx    # Socket state management
-│   │   ├── pages/
-│   │   │   ├── ChatPage.jsx
-│   │   │   ├── HomePage.jsx
-│   │   │   ├── LoginPage.jsx
-│   │   │   ├── RegisterPage.jsx
-│   │   │   └── ForgotPassword.jsx
-│   │   ├── services/
-│   │   │   ├── api.js               # Axios instances
-│   │   │   └── socket.js            # Socket.io setup
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── package.json
-│   ├── vite.config.js
-│   └── tailwind.config.js
-│
-└── README.md
+└── Frontend/
+    ├── src/
+    │   ├── api/             # API clients
+    │   ├── components/      # React components
+    │   ├── context/         # Context providers
+    │   ├── pages/           # Page components
+    │   ├── services/        # Service layer
+    │   └── main.jsx         # Entry point
+    └── package.json
 ```
 
-## 📸 Screenshots
+## API Endpoints
 
-### Login Page
-![Login](https://via.placeholder.com/800x400?text=Modern+Login+Page)
+**Auth**
+```
+POST   /api/auth/register
+POST   /api/auth/login
+POST   /api/auth/logout
+GET    /api/auth/me
+```
 
-### Chat Interface
-![Chat](https://via.placeholder.com/800x400?text=Beautiful+Chat+Interface)
+**Rooms**
+```
+GET    /api/rooms
+POST   /api/rooms
+POST   /api/rooms/direct
+GET    /api/rooms/:id
+PUT    /api/rooms/:id
+DELETE /api/rooms/:id
+POST   /api/rooms/:id/members
+DELETE /api/rooms/:id/members/:userId
+```
 
-### Room Management
-![Rooms](https://via.placeholder.com/800x400?text=Room+Management)
+**Messages**
+```
+GET    /api/messages/:roomId
+POST   /api/messages
+DELETE /api/messages/:id
+PUT    /api/messages/:id/read
+```
 
-## 🤝 Đóng góp
+**Users**
+```
+GET    /api/users
+GET    /api/users/search
+GET    /api/users/:id
+PUT    /api/users/:id
+```
 
-Chúng tôi rất hoan nghênh mọi đóng góp! Để đóng góp:
+**Friends**
+```
+GET    /api/friends
+POST   /api/friends/request
+POST   /api/friends/accept/:requestId
+POST   /api/friends/decline/:requestId
+DELETE /api/friends/:friendId
+```
 
-1. Fork repository này
-2. Tạo branch mới (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+**Notifications**
+```
+GET    /api/notifications
+POST   /api/notifications/accept/:id
+POST   /api/notifications/decline/:id
+PUT    /api/notifications/:id/read
+```
+
+## Socket.io Events
+
+**Client → Server**
+```
+join:room           # Tham gia phòng
+leave:room          # Rời phòng
+send:message        # Gửi tin nhắn
+typing:start        # Bắt đầu typing
+typing:stop         # Dừng typing
+```
+
+**Server → Client**
+```
+message:received    # Nhận tin nhắn mới
+member:joined       # Thành viên tham gia
+member:left         # Thành viên rời đi
+room:updated        # Phòng được cập nhật
+room:deleted        # Phòng bị xóa
+invitation:received # Nhận lời mời
+friend:request      # Lời mời kết bạn
+friend:accepted     # Chấp nhận kết bạn
+typing:indicator    # Hiển thị typing
+```
+
+## Tối ưu hóa
+
+**Database Indexing**
+```javascript
+// Room model
+roomSchema.index({ type: 1, members: 1 });
+roomSchema.index({ updatedAt: -1 });
+
+// Friendship model
+friendshipSchema.index({ requester: 1, recipient: 1 }, { unique: true });
+friendshipSchema.index({ requester: 1, status: 1 });
+```
+
+**Performance**
+- Lean queries để giảm memory
+- Selective populate chỉ fields cần thiết
+- Virtual scrolling cho message list
+- Optimistic UI updates
+- Socket.io room-based broadcasting
+
+**Security**
+- JWT với HTTP-only cookies
+- Password hashing với bcrypt (10 rounds)
+- Input validation
+- XSS protection
+- CORS configuration
+
+## Scripts hữu ích
+
+**Cleanup duplicate rooms:**
+```bash
+cd Backend
+node cleanup-duplicate-rooms.js
+```
+
+**Check errors:**
+```bash
+npm run lint
+```
+
+## Troubleshooting
+
+**Port đã sử dụng:**
+```bash
+# Windows
+netstat -ano | findstr :5000
+taskkill /PID <PID> /F
+
+# Linux/Mac
+lsof -ti:5000 | xargs kill -9
+```
+
+**MongoDB không kết nối:**
+- Kiểm tra MongoDB đang chạy: `mongod --version`
+- Kiểm tra connection string trong `.env`
+- Kiểm tra firewall/antivirus
+
+**Socket.io không hoạt động:**
+- Kiểm tra CORS configuration
+- Kiểm tra backend và frontend cùng chạy
+- Check browser console cho errors
+
+## Đóng góp
+
+1. Fork repository
+2. Tạo branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add AmazingFeature'`)
 4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Mở Pull Request
+5. Tạo Pull Request
 
-### Coding Standards
+## License
 
-- Sử dụng ESLint config của dự án
-- Viết code comments rõ ràng
-- Follow React best practices
-- Viết commit messages có ý nghĩa
+MIT
 
-## 🐛 Bug Reports
-
-Nếu bạn phát hiện bug, vui lòng tạo issue với thông tin:
-
-- Mô tả bug
-- Các bước tái hiện
-- Expected behavior
-- Screenshots (nếu có)
-- Environment (OS, Node version, etc.)
-
-## 📝 License
-
-Dự án này được phân phối dưới giấy phép ISC. Xem file `LICENSE` để biết thêm chi tiết.
-
-## 👨‍💻 Tác giả
+## Tác giả
 
 **Selenic151**
-
 - GitHub: [@Selenic151](https://github.com/Selenic151)
-- Email: your.email@example.com
-
-## 🙏 Lời cảm ơn
-
-- [React](https://reactjs.org/) - UI Library
-- [Socket.io](https://socket.io/) - Real-time engine
-- [Tailwind CSS](https://tailwindcss.com/) - CSS framework
-- [MongoDB](https://www.mongodb.com/) - Database
-- [Express](https://expressjs.com/) - Web framework
 
 ---
 
-<div align="center">
-
-**⭐ Nếu bạn thấy dự án này hữu ích, hãy cho chúng tôi một star! ⭐**
-
-Made with ❤️ by Selenic151
-
-</div>
+Nếu gặp vấn đề, vui lòng tạo issue trên GitHub.

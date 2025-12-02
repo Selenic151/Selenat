@@ -484,8 +484,18 @@ const ChatPage = () => {
           isOpen={showNewMessage}
           onClose={() => setShowNewMessage(false)}
           onRoomCreated={(room) => {
-            setRooms([room, ...rooms]);
-            setSelectedRoom(room);
+            // Check nếu room đã tồn tại trong list
+            const existingRoom = rooms.find(r => r._id === room._id);
+            
+            if (existingRoom) {
+              // Nếu đã có, chỉ cần select room đó
+              setSelectedRoom(existingRoom);
+            } else {
+              // Nếu chưa có, thêm vào đầu list
+              setRooms([room, ...rooms]);
+              setSelectedRoom(room);
+            }
+            
             setShowNewMessage(false);
           }}
         />

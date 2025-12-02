@@ -1,6 +1,5 @@
-import { createContext, useRef } from 'react';
-
-export const MessageCacheContext = createContext();
+import { useRef } from 'react';
+import { MessageCacheContext } from './MessageCacheContext.js';
 
 export const MessageCacheProvider = ({ children }) => {
   // Cache structure: { [roomId]: { messages: [], hasMore: boolean, lastFetch: timestamp } }
