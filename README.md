@@ -198,7 +198,7 @@ MIT
 
 ## Tác giả
 
-**Selenic151**
+**Selenic151** - Trương Xuân Nguyên
 - GitHub: [@Selenic151](https://github.com/Selenic151)
 
 ---
