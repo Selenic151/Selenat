@@ -1,7 +1,49 @@
 import { useSocket } from '../../context/SocketContext';
+import { useState, useEffect } from 'react';
+import { roomAPI } from '../../api';
 
 const RoomItem = ({ room, isSelected, onSelect }) => {
-  const { onlineUsers } = useSocket();
+  const { onlineUsers, socket } = useSocket();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch unread count khi component mount
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const { data } = await roomAPI.getUnreadCount(room._id);
+        setUnreadCount(data.unreadCount || 0);
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error);
+      }
+    };
+
+    fetchUnreadCount();
+  }, [room._id]);
+
+  // Reset unread count khi room được select
+  useEffect(() => {
+    if (isSelected && unreadCount > 0) {
+      setUnreadCount(0);
+    }
+  }, [isSelected]);
+
+  // Listen for new messages to update unread count
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = (message) => {
+      // Chỉ tăng count nếu message thuộc room này và room chưa được select
+      if (message.room === room._id && !isSelected) {
+        setUnreadCount(prev => prev + 1);
+      }
+    };
+
+    socket.on('message:received', handleNewMessage);
+
+    return () => {
+      socket.off('message:received', handleNewMessage);
+    };
+  }, [socket, room._id, isSelected]);
 
   // Đếm số member online
   const onlineMembersCount = room.members.filter((member) =>
@@ -40,7 +82,7 @@ const RoomItem = ({ room, isSelected, onSelect }) => {
     >
       <div className="flex items-center space-x-3">
         {/* Avatar */}
-        <div className="relative flex-shrink-0">
+        <div className="relative shrink-0">
           <img
             src={room.avatar || 'https://via.placeholder.com/50'}
             alt={room.name}
@@ -57,9 +99,17 @@ const RoomItem = ({ room, isSelected, onSelect }) => {
             <h3 className="font-semibold text-gray-900 truncate">
               {room.name}
             </h3>
-            <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
-              {formatTime(room.updatedAt)}
-            </span>
+            <div className="flex items-center gap-2 shrink-0 ml-2">
+              <span className="text-xs text-gray-500">
+                {formatTime(room.updatedAt)}
+              </span>
+              {/* Unread badge */}
+              {unreadCount > 0 && (
+                <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-semibold text-white bg-blue-600 rounded-full">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </div>
           </div>
           
           <div className="flex items-center justify-between mt-1">

@@ -1,5 +1,8 @@
 const Message = require('../models/Message');
 const Room = require('../models/Room');
+const sharp = require('sharp');
+const path = require('path');
+const fs = require('fs');
 
 // @desc    Get messages for a room
 // @route   GET /api/messages/:roomId
@@ -130,8 +133,110 @@ const markAsRead = async (req, res) => {
   }
 };
 
+// @desc    Upload files/images with message
+// @route   POST /api/messages/upload
+// @access  Private
+const uploadFiles = async (req, res) => {
+  try {
+    const { roomId, content } = req.body;
+    const files = req.files;
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: 'No files uploaded' });
+    }
+
+    // Check room membership
+    const room = await Room.findById(roomId);
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
+    }
+
+    const isMember = room.members.some(
+      memberId => memberId.toString() === req.user._id.toString()
+    );
+
+    if (!isMember) {
+      return res.status(403).json({ message: 'Not a member of this room' });
+    }
+
+    // Process attachments
+    const attachments = [];
+    for (const file of files) {
+      let finalPath = file.path;
+      
+      // Compress images
+      if (file.mimetype.startsWith('image/')) {
+        const compressedPath = file.path.replace(path.extname(file.path), '_compressed' + path.extname(file.path));
+        
+        try {
+          await sharp(file.path)
+            .resize(1920, 1080, {
+              fit: 'inside',
+              withoutEnlargement: true
+            })
+            .jpeg({ quality: 80 })
+            .toFile(compressedPath);
+          
+          // Delete original, use compressed
+          fs.unlinkSync(file.path);
+          finalPath = compressedPath;
+        } catch (err) {
+          console.error('Image compression failed:', err);
+          // Keep original if compression fails
+        }
+      }
+
+      attachments.push({
+        filename: path.basename(finalPath),
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        url: `/uploads/messages/${path.basename(finalPath)}`
+      });
+    }
+
+    // Determine message type
+    let messageType = 'file';
+    if (attachments.every(a => a.mimeType.startsWith('image/'))) {
+      messageType = 'image';
+    } else if (attachments.every(a => a.mimeType.startsWith('video/'))) {
+      messageType = 'video';
+    }
+
+    // Create message
+    const message = await Message.create({
+      room: roomId,
+      sender: req.user._id,
+      content: content || '',
+      type: messageType,
+      attachments
+    });
+
+    await message.populate('sender', 'username avatar');
+
+    // Update room's lastMessage
+    await room.updateLastMessage({
+      content: messageType === 'image' ? '📷 Hình ảnh' : messageType === 'video' ? '🎥 Video' : '📎 File',
+      sender: req.user._id,
+      createdAt: message.createdAt
+    });
+
+    // Emit socket event
+    const io = req.app.get('io');
+    if (io) {
+      io.to(roomId).emit('message:received', message);
+    }
+
+    res.status(201).json(message);
+  } catch (error) {
+    console.error('Upload files error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getMessages,
   createMessage,
-  markAsRead
+  markAsRead,
+  uploadFiles
 };

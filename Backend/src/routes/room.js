@@ -10,9 +10,13 @@ const {
   deleteRoom,
   uploadRoomAvatar,
   transferOwnership,
-  createDirectRoom
+  createDirectRoom,
+  getUnreadCount,
+  markRoomAsRead
 } = require('../controllers/roomController');
 const { protect } = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const { createRoomSchema, createDirectRoomSchema, addMembersSchema } = require('../validation/schemas');
 const multer = require('multer');
 const path = require('path');
 
@@ -30,18 +34,22 @@ const upload = multer({
 
 router.route('/')
   .get(protect, getRooms)
-  .post(protect, createRoom);
+  .post(protect, validate(createRoomSchema), createRoom);
 
-router.post('/direct', protect, createDirectRoom);
+router.post('/direct', protect, validate(createDirectRoomSchema), createDirectRoom);
 
 router.route('/:id')
   .get(protect, getRoomById)
   .put(protect, updateRoom)
   .delete(protect, deleteRoom);
 
-router.post('/:id/members', protect, addMember);
+router.post('/:id/members', protect, validate(addMembersSchema), addMember);
 router.delete('/:id/members/:userId', protect, removeMember);
 router.put('/:id/avatar', protect, upload.single('avatar'), uploadRoomAvatar);
 router.post('/:id/transfer', protect, transferOwnership);
+
+// Unread count endpoints
+router.get('/:roomId/unread', protect, getUnreadCount);
+router.post('/:roomId/read', protect, markRoomAsRead);
 
 module.exports = router;

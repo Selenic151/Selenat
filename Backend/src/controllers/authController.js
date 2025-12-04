@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const cacheService = require('../services/cacheService');
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -85,7 +86,17 @@ const login = async (req, res) => {
 // @access  Private
 const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const cacheKey = `user:${req.user._id}`;
+    
+    // Try cache first (1 hour TTL)
+    const user = await cacheService.cacheWrapper(
+      cacheKey,
+      async () => {
+        return await User.findById(req.user._id).lean();
+      },
+      3600 // 1 hour
+    );
+    
     res.json(user);
   } catch (error) {
     console.error('Get me error:', error);
@@ -100,6 +111,10 @@ const logout = async (req, res) => {
   try {
     // Update user online status
     await User.findByIdAndUpdate(req.user._id, { isOnline: false });
+    
+    // Invalidate user cache
+    await cacheService.del(`user:${req.user._id}`);
+    
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);

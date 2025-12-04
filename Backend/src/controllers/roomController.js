@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Room = require("../models/Room");
 const Message = require("../models/Message");
 const Notification = require('../models/Notification');
+const cacheService = require('../services/cacheService');
+const { invalidateMultipleUserRoomsCache } = require('../utils/cacheInvalidation');
 
 // Tạo phòng chat mới
 const createRoom = async (req, res) => {
@@ -71,6 +73,9 @@ const createRoom = async (req, res) => {
             }
         }
 
+        // Invalidate rooms cache for all members
+        await invalidateMultipleUserRoomsCache(safeMembers.map(m => m.toString()));
+
         res.status(201).json(room);        
     } catch (error) {
         console.error('CreateRoom error:', error && error.stack ? error.stack : error);
@@ -83,14 +88,23 @@ const getUserRooms = async (req, res) => {
     try {
         console.debug('getUserRooms for user:', req.user && req.user._id);
         
-        // Chỉ populate thông tin cần thiết (không populate hết members)
-        const rooms = await Room.find({ members: req.user._id })
-            .populate('creator', 'username avatar')
-            .populate('members', 'username email avatar online') // Chỉ lấy info cơ bản
-            .populate('lastMessage.sender', 'username avatar')
-            .select('-participantSettings') // Không trả về settings trong list
-            .sort({ updatedAt: -1 })
-            .lean(); // Use lean() for better performance (plain JS objects)
+        const cacheKey = `rooms:user:${req.user._id}`;
+        
+        // Try cache first (5 minutes TTL)
+        const rooms = await cacheService.cacheWrapper(
+            cacheKey,
+            async () => {
+                // Chỉ populate thông tin cần thiết (không populate hết members)
+                return await Room.find({ members: req.user._id })
+                    .populate('creator', 'username avatar')
+                    .populate('members', 'username email avatar online') // Chỉ lấy info cơ bản
+                    .populate('lastMessage.sender', 'username avatar')
+                    .select('-participantSettings') // Không trả về settings trong list
+                    .sort({ updatedAt: -1 })
+                    .lean(); // Use lean() for better performance (plain JS objects)
+            },
+            300 // 5 minutes
+        );
         
         res.json(rooms);
     }
@@ -167,6 +181,9 @@ const addRoomMember = async (req, res) => {
         await room.save();
         await room.populate('creator members admins', '-password');
 
+        // Invalidate cache for all room members
+        await invalidateMultipleUserRoomsCache([...room.members.map(m => m._id.toString()), userId]);
+
         // Emit socket event for member joining
         const io = req.app.get('io');
         if (io) {
@@ -208,6 +225,9 @@ const deleteRoom = async (req, res) => {
         
         // Xóa room khỏi database
         await Room.findByIdAndDelete(room._id);
+
+        // Invalidate cache for all members
+        await invalidateMultipleUserRoomsCache(room.members.map(m => m.toString()));
 
         // Emit socket event
         const io = req.app.get('io');
@@ -403,6 +423,75 @@ const createDirectRoom = async (req, res) => {
     }
 };
 
+// Lấy số lượng tin nhắn chưa đọc cho một room
+const getUnreadCount = async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        const userId = req.user._id;
+
+        // Lấy room và lastRead timestamp
+        const room = await Room.findById(roomId);
+        if (!room) {
+            return res.status(404).json({ message: 'Room not found' });
+        }
+
+        // Kiểm tra user có trong room không
+        if (!room.members.some(m => m.toString() === userId.toString())) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+
+        // Lấy lastRead timestamp của user này
+        const settings = room.participantSettings.get(userId.toString());
+        const lastRead = settings?.lastRead || new Date(0); // Nếu chưa có thì dùng epoch
+
+        // Đếm tin nhắn chưa đọc (createdAt > lastRead và không phải của mình)
+        const unreadCount = await Message.countDocuments({
+            room: roomId,
+            sender: { $ne: userId },
+            createdAt: { $gt: lastRead }
+        });
+
+        res.json({ roomId, unreadCount });
+    } catch (error) {
+        console.error('getUnreadCount error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Đánh dấu room là đã đọc (update lastRead)
+const markRoomAsRead = async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        const userId = req.user._id.toString();
+
+        const room = await Room.findById(roomId);
+        if (!room) {
+            return res.status(404).json({ message: 'Room not found' });
+        }
+
+        if (!room.members.some(m => m.toString() === userId)) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+
+        // Update lastRead timestamp
+        const settings = room.participantSettings.get(userId) || {
+            muted: false,
+            archived: false,
+            pinned: false,
+            lastRead: new Date()
+        };
+        settings.lastRead = new Date();
+        room.participantSettings.set(userId, settings);
+
+        await room.save();
+
+        res.json({ message: 'Marked as read', lastRead: settings.lastRead });
+    } catch (error) {
+        console.error('markRoomAsRead error:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     createRoom,
     getRooms: getUserRooms,
@@ -413,5 +502,7 @@ module.exports = {
     deleteRoom,
     uploadRoomAvatar,
     transferOwnership,
-    createDirectRoom
+    createDirectRoom,
+    getUnreadCount,
+    markRoomAsRead
 };

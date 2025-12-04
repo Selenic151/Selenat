@@ -128,6 +128,17 @@ const ChatPage = () => {
     }
   };
 
+  const handleSelectRoom = async (room) => {
+    setSelectedRoom(room);
+    
+    // Mark room as read
+    try {
+      await roomAPI.markAsRead(room._id);
+    } catch (error) {
+      console.error('Failed to mark room as read:', error);
+    }
+  };
+
   const handleCreateRoom = () => {
     setShowCreateRoom(true);
   };
@@ -201,14 +212,14 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100">
+    <div className="flex h-screen overflow-hidden bg-linear-to-br from-slate-50 to-gray-100">
       {/* Sidebar */}
       <div 
         className="bg-white/95 backdrop-blur-sm border-r border-gray-200 flex flex-col shadow-xl relative"
         style={{ width: `${sidebarWidth}px`, minWidth: '250px', maxWidth: '500px' }}
       >
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+        <div className="p-6 border-b border-gray-200 bg-linear-to-r from-blue-500 to-purple-600 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -321,10 +332,10 @@ const ChatPage = () => {
                 return (
                   <div
                     key={room._id}
-                    onClick={() => setSelectedRoom(room)}
+                    onClick={() => handleSelectRoom(room)}
                     className={`p-4 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md ${
                       selectedRoom?._id === room._id
-                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform scale-[1.02]'
+                        ? 'bg-linear-to-r from-blue-500 to-purple-600 text-white shadow-lg transform scale-[1.02]'
                         : 'bg-gray-50 hover:bg-white border border-gray-200'
                     }`}
                   >

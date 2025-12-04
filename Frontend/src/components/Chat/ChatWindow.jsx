@@ -249,6 +249,23 @@ const ChatWindow = ({ room }) => {
     }
   };
 
+  const handleUpload = async (formData) => {
+    try {
+      const response = await messageAPI.uploadFiles(formData);
+      const newMessage = response.data;
+      
+      // Add to messages (don't optimistic - files are slow)
+      setMessages(prev => [...prev, newMessage]);
+      updateCache(room._id, (cachedMsgs) => [...cachedMsgs, newMessage]);
+      
+      // Scroll to bottom after upload
+      scrollToBottom();
+    } catch (error) {
+      console.error('Upload failed:', error);
+      throw error;
+    }
+  };
+
   const searchMembers = async q => {
     setMemberSearch(q);
     if (!q || q.trim().length < 2) return setMemberResults([]);
@@ -354,7 +371,12 @@ const ChatWindow = ({ room }) => {
 
       {/* Input */}
       <div ref={inputRef} className={`px-4 py-3.5 border-t ${darkMode ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}>
-        <MessageInput roomId={room._id} onSend={sendMessageOptimistic} darkMode={darkMode} />
+        <MessageInput 
+          roomId={room._id} 
+          onSend={sendMessageOptimistic} 
+          onUpload={handleUpload}
+          darkMode={darkMode} 
+        />
       </div>
 
       {/* Sidebar */}

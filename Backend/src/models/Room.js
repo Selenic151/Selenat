@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const cacheService = require('../services/cacheService');
 
 const roomSchema = new mongoose.Schema({
   name: {
@@ -66,15 +67,23 @@ roomSchema.virtual('unreadCount').get(function() {
   return 0; // Will be computed in controller
 });
 
-// Static method để tìm direct room (optimized)
+// Static method để tìm direct room (optimized with cache)
 roomSchema.statics.findDirectRoom = async function(userId1, userId2) {
   // Sort userIds để query consistent
   const [user1, user2] = [userId1, userId2].sort();
+  const cacheKey = `direct:${user1}:${user2}`;
   
-  return this.findOne({
-    type: 'direct',
-    members: { $all: [user1, user2], $size: 2 }
-  }).populate('members', 'username email avatar online');
+  // Try cache first (24 hours TTL)
+  return await cacheService.cacheWrapper(
+    cacheKey,
+    async () => {
+      return this.findOne({
+        type: 'direct',
+        members: { $all: [user1, user2], $size: 2 }
+      }).populate('members', 'username email avatar online');
+    },
+    86400 // 24 hours
+  );
 };
 
 // Static method để tạo direct room

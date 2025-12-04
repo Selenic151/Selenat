@@ -13,13 +13,23 @@ const messageSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: [true, 'Message content is required']
+    required: function() {
+      // Content chỉ required nếu không có attachment
+      return !this.attachments || this.attachments.length === 0;
+    }
   },
   type: {
     type: String,
-    enum: ['text', 'image', 'file'],
+    enum: ['text', 'image', 'file', 'video'],
     default: 'text'
   },
+  attachments: [{
+    filename: String,
+    originalName: String,
+    mimeType: String,
+    size: Number,
+    url: String
+  }],
   readBy: [{
     user: {
       type: mongoose.Schema.Types.ObjectId,

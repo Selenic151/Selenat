@@ -3,6 +3,12 @@ import { useTheme } from '../../context/useTheme';
 import { useRef, useCallback, useEffect, useMemo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
+// Helper to get server URL without /api suffix
+const getServerURL = () => {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  return apiUrl.replace(/\/api$/, ''); // Remove /api suffix
+};
+
 const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomChange, loadingOlder = false, hasMore, darkMode, onMeasureAvg, virtuosoRef: externalRef }) => {
   const { user } = useAuth();
   const { darkMode: themeDarkMode } = useTheme();
@@ -195,7 +201,50 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
             <div data-msg-bubble className={`px-4 py-2.5 rounded-2xl ${it.isOwn 
               ? 'bg-blue-500 text-white rounded-tr-none' 
               : isDark ? 'bg-gray-800 text-gray-100 rounded-tl-none' : 'bg-gray-100 text-gray-900 rounded-tl-none'}`}>
-              <div className="text-sm leading-relaxed">{it.msg.content}</div>
+              
+              {/* Attachments */}
+              {it.msg.attachments && it.msg.attachments.length > 0 && (
+                <div className="mb-2">
+                  {it.msg.attachments.map((att, idx) => (
+                    <div key={idx} className="mb-2">
+                      {att.mimeType.startsWith('image/') ? (
+                        <img 
+                          src={`${getServerURL()}${att.url}`}
+                          alt={att.originalName}
+                          className="max-w-full rounded-lg cursor-pointer hover:opacity-90"
+                          onClick={() => window.open(`${getServerURL()}${att.url}`, '_blank')}
+                        />
+                      ) : att.mimeType.startsWith('video/') ? (
+                        <video 
+                          controls
+                          className="max-w-full rounded-lg"
+                          src={`${getServerURL()}${att.url}`}
+                        />
+                      ) : (
+                        <a 
+                          href={`${getServerURL()}${att.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                            it.isOwn ? 'bg-blue-600' : isDark ? 'bg-gray-700' : 'bg-gray-200'
+                          }`}
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                          <span className="text-sm truncate max-w-[200px]">{att.originalName}</span>
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Text content */}
+              {it.msg.content && (
+                <div className="text-sm leading-relaxed">{it.msg.content}</div>
+              )}
+              
               <div className={`text-xs mt-1.5 ${it.isOwn ? 'text-blue-100' : isDark ? 'text-gray-500' : 'text-gray-600'}`}>
                 {new Date(it.msg.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
               </div>

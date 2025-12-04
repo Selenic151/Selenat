@@ -4,7 +4,10 @@ const cors = require('cors');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
+const { connectRedis } = require('./config/redis');
+const cacheService = require('./services/cacheService');
 const socketHandler = require('./socket/socketHandler');
+const { apiLimiter } = require('./middleware/rateLimiter');
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -33,6 +36,11 @@ const io = new Server(httpServer, {
 // Connect Database
 connectDB();
 
+// Connect Redis (optional - will fallback gracefully if not available)
+connectRedis().then(() => {
+  cacheService.init();
+});
+
 // Middleware
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -40,6 +48,9 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Apply general rate limiter to all API routes
+app.use('/api/', apiLimiter);
 
 // Basic route
 app.get('/', (req, res) => {
