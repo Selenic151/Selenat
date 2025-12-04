@@ -10,7 +10,7 @@ export const roomAPI = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   deleteRoom: (id) => apiClient.delete(`/rooms/${id}`),
-  addMember: (id, userId) => apiClient.post(`/rooms/${id}/members`, { userId }),
+  addMember: (id, userId) => apiClient.post(`/rooms/${id}/members`, { userIds: [userId] }),
   removeMember: (id, userId) => apiClient.delete(`/rooms/${id}/members/${userId}`),
   removeRoomMember: (id, userId) => apiClient.delete(`/rooms/${id}/members/${userId}`),
   transferOwnership: (id, newCreatorId) => apiClient.post(`/rooms/${id}/transfer`, { newCreatorId }),

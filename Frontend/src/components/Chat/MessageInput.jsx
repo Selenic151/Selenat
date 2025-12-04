@@ -106,17 +106,48 @@ const MessageInput = ({ roomId, onSend, onUpload, darkMode: darkModeProp }) => {
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      {/* File preview */}
+      {/* File preview with enhanced styling */}
       {selectedFiles.length > 0 && (
-        <div className={`mb-2 p-3 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <div className="flex flex-wrap gap-2">
+        <div className={`mb-3 p-4 rounded-2xl backdrop-blur-sm border transition-all duration-300 animate-slide-in-left ${
+          isDark 
+            ? 'bg-gray-800/90 border-gray-700/50 shadow-lg shadow-gray-900/50' 
+            : 'bg-white/90 border-gray-200/50 shadow-lg shadow-gray-200/50'
+        }`}>
+          <div className="flex flex-wrap gap-3">
             {selectedFiles.map((file, index) => (
-              <div key={index} className={`relative group px-3 py-1 rounded-full text-sm ${isDark ? 'bg-gray-700' : 'bg-white'}`}>
-                <span className="truncate max-w-[150px] inline-block">{file.name}</span>
+              <div 
+                key={index} 
+                className={`relative group px-4 py-2 rounded-xl text-sm transition-all duration-300 hover:scale-105 animate-fade-in-up ${
+                  isDark ? 'bg-gray-700/80 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className={`p-1 rounded-lg ${
+                    file.type.startsWith('image/') ? 'bg-green-500' :
+                    file.type.startsWith('video/') ? 'bg-blue-500' : 'bg-orange-500'
+                  }`}>
+                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {file.type.startsWith('image/') ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      ) : file.type.startsWith('video/') ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      )}
+                    </svg>
+                  </div>
+                  <span className="truncate max-w-[150px] font-medium">{file.name}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    isDark ? 'bg-gray-600 text-gray-300' : 'bg-gray-300 text-gray-600'
+                  }`}>
+                    {(file.size / 1024).toFixed(1)} KB
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => removeFile(index)}
-                  className="ml-2 text-red-500 hover:text-red-700"
+                  className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 hover:scale-110 shadow-lg"
                 >
                   ✕
                 </button>
@@ -126,8 +157,8 @@ const MessageInput = ({ roomId, onSend, onUpload, darkMode: darkModeProp }) => {
         </div>
       )}
 
-      <div className="flex items-end space-x-2">
-        {/* File upload button */}
+      <div className="flex items-end space-x-3">
+        {/* File upload button with enhanced styling */}
         <input
           type="file"
           ref={fileInputRef}
@@ -139,9 +170,14 @@ const MessageInput = ({ roomId, onSend, onUpload, darkMode: darkModeProp }) => {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className={`p-3 rounded-2xl transition-all ${isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+          className={`p-3 rounded-2xl transition-all duration-300 btn-hover-lift group ${
+            isDark 
+              ? 'bg-gray-800/80 hover:bg-gray-700 border border-gray-600/50' 
+              : 'bg-white/80 hover:bg-gray-50 border border-gray-300/50 shadow-lg'
+          }`}
+          title="Đính kèm file"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
           </svg>
         </button>
@@ -153,24 +189,33 @@ const MessageInput = ({ roomId, onSend, onUpload, darkMode: darkModeProp }) => {
               value={message}
               onChange={handleChange}
               placeholder="Nhập tin nhắn của bạn..."
-              className={`w-full px-4 py-3 pr-12 border rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 resize-none ${
+              className={`w-full px-5 py-4 pr-14 border-2 rounded-2xl focus:outline-none focus:ring-0 input-focus-glow transition-all duration-300 resize-none ${
                 isDark 
-                  ? 'bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-500 hover:bg-gray-750' 
-                  : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400 hover:bg-white'
+                  ? 'bg-gray-800/90 border-gray-600/50 text-gray-100 placeholder-gray-400 hover:bg-gray-750 focus:border-blue-500/50' 
+                  : 'bg-white/90 border-gray-300/50 text-gray-900 placeholder-gray-500 hover:bg-white focus:border-blue-500/50 shadow-lg'
               }`}
-              style={{ minHeight: '48px' }}
+              style={{ minHeight: '52px' }}
             />
+            {/* Typing indicator */}
+            {message && (
+              <div className="absolute right-4 top-4 flex space-x-1">
+                <div className="typing-dot w-1 h-1 bg-gray-400 rounded-full"></div>
+                <div className="typing-dot w-1 h-1 bg-gray-400 rounded-full"></div>
+                <div className="typing-dot w-1 h-1 bg-gray-400 rounded-full"></div>
+              </div>
+            )}
           </div>
         </div>
 
         <button
           type="submit"
           disabled={!message.trim() && selectedFiles.length === 0 || uploading}
-          className={`p-3 rounded-2xl transition-all duration-200 shadow-lg ${
+          className={`p-4 rounded-2xl transition-all duration-300 shadow-xl ${
             (message.trim() || selectedFiles.length > 0) && !uploading
-              ? 'bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white transform hover:scale-105'
+              ? 'bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white transform hover:scale-105 btn-hover-lift'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}
+          title="Gửi tin nhắn"
         >
           {uploading ? (
             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">

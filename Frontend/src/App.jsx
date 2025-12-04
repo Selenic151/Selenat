@@ -8,6 +8,7 @@ import Register from './components/Auth/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ChatPage from './pages/ChatPage';
 import ProtectedRoute from './components/Common/ProtectedRoute';
+import PageTransition from './components/Common/PageTransition';
 
 function App() {
   return (
@@ -17,14 +18,28 @@ function App() {
           <MessageCacheProvider>
             <SocketProvider>
               <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/login" element={
+                  <PageTransition>
+                    <Login />
+                  </PageTransition>
+                } />
+                <Route path="/register" element={
+                  <PageTransition>
+                    <Register />
+                  </PageTransition>
+                } />
+                <Route path="/forgot-password" element={
+                  <PageTransition>
+                    <ForgotPassword />
+                  </PageTransition>
+                } />
                 <Route
                   path="/chat"
                   element={
                     <ProtectedRoute>
-                      <ChatPage />
+                      <PageTransition>
+                        <ChatPage />
+                      </PageTransition>
                     </ProtectedRoute>
                   }
                 />

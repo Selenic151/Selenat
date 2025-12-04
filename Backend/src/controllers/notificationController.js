@@ -22,7 +22,7 @@ const inviteUsersToRoom = async (req, res) => {
     const { roomId, userIds } = req.body;
 
     // Get room and check permissions
-    const room = await Room.findById(roomId).populate('creator admins');
+    const room = await Room.findById(roomId).populate('creator admins members', 'username email avatar');
     
     if (!room) {
       return res.status(404).json({ message: 'Room not found' });
@@ -42,8 +42,8 @@ const inviteUsersToRoom = async (req, res) => {
     // Create notifications for each user
     const notifications = await Promise.all(
       userIds.map(async (userId) => {
-        // Check if user already a member
-        const isMember = room.members.some(m => m.toString() === userId);
+        // Check if user already a member (filter out null members first)
+        const isMember = room.members.filter(m => m != null).some(m => (m._id ? m._id.toString() : m.toString()) === userId);
         if (isMember) {
           return null;
         }

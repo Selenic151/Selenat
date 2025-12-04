@@ -4,8 +4,6 @@ import { roomAPI, notificationAPI } from '../services/api';
 import ChatWindow from '../components/Chat/ChatWindow';
 import CreateRoom from '../components/Room/CreateRoom';
 import Notifications from '../components/Notification/Notifications';
-import AddMemberModal from '../components/Room/AddMemberModal';
-import TransferOwnershipModal from '../components/Room/TransferOwnershipModal';
 import FriendsList from '../components/Friend/FriendsList';
 import NewMessageModal from '../components/Chat/NewMessageModal';
 import { useSocket } from '../context/SocketContext';
@@ -25,8 +23,6 @@ const ChatPage = () => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showAddMember, setShowAddMember] = useState(false);
-  const [showTransferModal, setShowTransferModal] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
   const [showNewMessage, setShowNewMessage] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -161,41 +157,6 @@ const ChatPage = () => {
     }
   };
 
-  const handleLeaveRoom = async () => {
-    if (!selectedRoom) return;
-    
-    const isCreator = selectedRoom.creator._id === user._id;
-    
-    // Nếu là creator và còn thành viên khác -> yêu cầu chuyển quyền
-    if (isCreator && selectedRoom.members.length > 1) {
-      setShowTransferModal(true);
-      return;
-    }
-    
-    if (!window.confirm(`Bạn có chắc chắn muốn rời khỏi phòng "${selectedRoom.name}"?`)) return;
-
-    try {
-      const response = await roomAPI.removeMember(selectedRoom._id, user._id);
-      
-      // Kiểm tra nếu phòng bị xóa
-      if (response.data.deleted) {
-        alert(response.data.message);
-      }
-      
-      setSelectedRoom(null);
-      await refreshRooms();
-    } catch (error) {
-      console.error('Error leaving room:', error);
-      
-      // Xử lý trường hợp requireTransfer
-      if (error.response?.data?.requireTransfer) {
-        setShowTransferModal(true);
-      } else {
-        alert('Không thể rời khỏi phòng: ' + error.response?.data?.message);
-      }
-    }
-  };
-
   const handleOpenNotifications = () => {
     setShowNotifications(true);
   };
@@ -212,37 +173,48 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-linear-to-br from-slate-50 to-gray-100">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800">
+      
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-60 -right-60 w-[40rem] h-[40rem] bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-full blur-[120px] animate-float"></div>
+        <div className="absolute -bottom-60 -left-60 w-[40rem] h-[40rem] bg-gradient-to-br from-pink-400/20 to-orange-500/20 rounded-full blur-[120px] animate-float delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] bg-gradient-to-br from-indigo-400/10 to-cyan-500/10 rounded-full blur-[100px] animate-pulse-slow delay-500"></div>
+      </div>
+
       {/* Sidebar */}
       <div 
-        className="bg-white/95 backdrop-blur-sm border-r border-gray-200 flex flex-col shadow-xl relative"
+        className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 flex flex-col shadow-2xl relative z-10 card-hover"
         style={{ width: `${sidebarWidth}px`, minWidth: '250px', maxWidth: '500px' }}
       >
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 bg-linear-to-r from-blue-500 to-purple-600 text-white">
-          <div className="flex items-center justify-between">
+        <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-linear-to-r from-blue-500 via-purple-600 to-pink-500 text-white relative overflow-hidden">
+          {/* Animated background gradient */}
+          <div className="absolute inset-0 bg-linear-to-r from-blue-600/20 via-purple-700/20 to-pink-600/20 animate-gradient-shift"></div>
+          
+          <div className="flex items-center justify-between relative z-10">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center shadow-lg backdrop-blur-sm avatar-hover">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-bold">Selenat Chat</h1>
-                <p className="text-sm text-blue-100">Trò chuyện tức thì</p>
+                <h1 className="text-xl font-bold animate-fade-in-up">Selenat Chat</h1>
+                <p className="text-sm text-blue-100 animate-fade-in-up delay-200">Trò chuyện tức thì</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowFriends(true)}
-                className="p-2 hover:bg-white/20 rounded-full transition-colors duration-200 relative"
+                className="p-3 hover:bg-white/20 rounded-xl transition-all duration-300 btn-hover-lift relative group"
                 title="Bạn bè"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
                 {friendRequestCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-bounce notification-badge">
                     {friendRequestCount}
                   </span>
                 )}
@@ -250,14 +222,14 @@ const ChatPage = () => {
               
               <button
                 onClick={handleOpenNotifications}
-                className="p-2 hover:bg-white/20 rounded-full transition-colors duration-200 relative"
+                className="p-3 hover:bg-white/20 rounded-xl transition-all duration-300 btn-hover-lift relative group"
                 title="Thông báo"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM15 17H9a6 6 0 01-6-6V9a6 6 0 0110.293-4.293L15 9v8z" />
                 </svg>
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-bounce notification-badge">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -265,10 +237,10 @@ const ChatPage = () => {
               
               <button
                 onClick={logout}
-                className="p-2 hover:bg-white/20 rounded-full transition-colors duration-200"
+                className="p-3 hover:bg-white/20 rounded-xl transition-all duration-300 btn-hover-lift group"
                 title="Đăng xuất"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
               </button>
@@ -276,8 +248,8 @@ const ChatPage = () => {
           </div>
 
           {/* User Info */}
-          <div className="mt-4 flex items-center space-x-3 bg-white/10 rounded-lg p-3">
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+          <div className="mt-4 flex items-center space-x-3 bg-white/10 rounded-xl p-4 backdrop-blur-sm animate-slide-in-left delay-400">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center avatar-hover">
               <span className="text-sm font-semibold text-white">
                 {user?.username?.charAt(0).toUpperCase()}
               </span>
@@ -288,10 +260,10 @@ const ChatPage = () => {
             </div>
             <button
               onClick={() => setShowNewMessage(true)}
-              className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors duration-200"
+              className="p-3 bg-white/20 hover:bg-white/30 rounded-xl transition-all duration-300 btn-hover-lift group"
               title="Tin nhắn mới"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             </button>
@@ -319,7 +291,7 @@ const ChatPage = () => {
             </h2>
 
             <div className="space-y-2">
-              {rooms.map((room) => {
+              {rooms.map((room, index) => {
                 // Hiển thị tên người kia cho direct room
                 const getRoomDisplayName = () => {
                   if (room.type === 'direct') {
@@ -333,27 +305,28 @@ const ChatPage = () => {
                   <div
                     key={room._id}
                     onClick={() => handleSelectRoom(room)}
-                    className={`p-4 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md ${
+                    className={`p-4 rounded-xl cursor-pointer transition-all duration-300 card-hover animate-fade-in-up ${
                       selectedRoom?._id === room._id
-                        ? 'bg-linear-to-r from-blue-500 to-purple-600 text-white shadow-lg transform scale-[1.02]'
-                        : 'bg-gray-50 hover:bg-white border border-gray-200'
+                        ? 'bg-linear-to-r from-blue-500 to-purple-600 text-white shadow-xl transform scale-[1.02] ring-2 ring-blue-300/50'
+                        : 'bg-white/60 dark:bg-gray-800/60 hover:bg-white/80 dark:hover:bg-gray-800/80 border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm'
                     }`}
+                    style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <h3 className={`font-semibold text-sm ${
-                          selectedRoom?._id === room._id ? 'text-white' : 'text-gray-800'
+                        <h3 className={`font-semibold text-sm transition-colors duration-300 ${
+                          selectedRoom?._id === room._id ? 'text-white' : 'text-gray-800 dark:text-gray-200'
                         }`}>
                           {getRoomDisplayName()}
                         </h3>
-                        <p className={`text-xs mt-1 ${
-                          selectedRoom?._id === room._id ? 'text-blue-100' : 'text-gray-500'
+                        <p className={`text-xs mt-1 transition-colors duration-300 ${
+                          selectedRoom?._id === room._id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
                         }`}>
                           {room.members?.length || 0} thành viên
                         </p>
                       </div>
                       {selectedRoom?._id === room._id && (
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                        <div className="w-3 h-3 bg-white rounded-full animate-pulse shadow-lg"></div>
                       )}
                     </div>
                   </div>
@@ -371,30 +344,6 @@ const ChatPage = () => {
             )}
           </div>
         </div>
-
-        {/* Room Actions */}
-        {selectedRoom && (
-          <div className="border-t border-gray-200 p-4 space-y-2">
-            <button
-              onClick={() => setShowAddMember(true)}
-              className="w-full flex items-center justify-center px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 font-medium text-sm"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-              </svg>
-              Thêm thành viên
-            </button>
-            <button
-              onClick={handleLeaveRoom}
-              className="w-full flex items-center justify-center px-4 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200 font-medium text-sm"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              Rời khỏi nhóm
-            </button>
-          </div>
-        )}
 
         {/* Resize Handle */}
         <div
@@ -447,26 +396,6 @@ const ChatPage = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {showAddMember && selectedRoom && (
-        <AddMemberModal
-          room={selectedRoom}
-          onClose={() => setShowAddMember(false)}
-          onSuccess={refreshRooms}
-        />
-      )}
-
-      {showTransferModal && selectedRoom && (
-        <TransferOwnershipModal
-          room={selectedRoom}
-          currentUserId={user._id}
-          onClose={() => setShowTransferModal(false)}
-          onSuccess={() => {
-            setSelectedRoom(null);
-            refreshRooms();
-          }}
-        />
       )}
 
       {showFriends && (

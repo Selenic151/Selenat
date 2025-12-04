@@ -170,31 +170,38 @@ const addRoomMember = async (req, res) => {
             return res.status(403).json({ message: 'Truy cập bị từ chối, bạn không phải quản trị viên của phòng này' });
         }
         
-        const { userId } = req.body;
+        const { userIds } = req.body;
+        const idsToAdd = Array.isArray(userIds) ? userIds : [userIds];
         
-        // kiểm tra thành viên đã có trong phòng chưa
-        if (room.members.includes(userId)) {
+        // Filter out members already in room
+        const newMembers = idsToAdd.filter(id => 
+            !room.members.some(member => member._id.toString() === id)
+        );
+
+        if (newMembers.length === 0) {
             return res.status(400).json({ message: 'Thành viên đã có trong phòng' });
         }
 
-        room.members.push(req.body.userId);
+        room.members.push(...newMembers);
         await room.save();
         await room.populate('creator members admins', '-password');
 
         // Invalidate cache for all room members
-        await invalidateMultipleUserRoomsCache([...room.members.map(m => m._id.toString()), userId]);
+        await invalidateMultipleUserRoomsCache([...room.members.map(m => m._id.toString()), ...newMembers]);
 
         // Emit socket event for member joining
         const io = req.app.get('io');
         if (io) {
-            // Find the user who joined
-            const joinedUser = room.members.find(m => m._id.toString() === userId);
-            if (joinedUser) {
-                io.to(room._id.toString()).emit('member:joined', {
-                    roomId: room._id.toString(),
-                    userId: userId,
-                    username: joinedUser.username
-                });
+            // Emit event for each newly added member
+            for (const userId of newMembers) {
+                const joinedUser = room.members.find(m => m._id.toString() === userId);
+                if (joinedUser) {
+                    io.to(room._id.toString()).emit('member:joined', {
+                        roomId: room._id.toString(),
+                        userId: userId,
+                        username: joinedUser.username
+                    });
+                }
             }
         }
 
@@ -248,7 +255,7 @@ const deleteRoom = async (req, res) => {
 // xóa thành viên khỏi phòng chat
 const removeRoomMember = async (req, res) => {
     try {
-        const room = await Room.findById(req.params.id);
+        const room = await Room.findById(req.params.id).populate('members', 'username');
         if (!room) {
             return res.status(404).json({ message: 'Phòng không tồn tại' });
         }
@@ -256,7 +263,8 @@ const removeRoomMember = async (req, res) => {
         const { userId } = req.params;
         const isRemovingSelf = userId === req.user._id.toString();
         const isAdmin = room.admins.some(adminId => adminId.toString() === req.user._id.toString());
-        const isCreator = userId === room.creator.toString();
+        const creatorId = room.creator._id ? room.creator._id.toString() : room.creator.toString();
+        const isCreator = userId === creatorId;
         
         // Cho phép: user tự rời phòng HOẶC admin xóa member khác
         if (!isRemovingSelf && !isAdmin) {
@@ -289,7 +297,10 @@ const removeRoomMember = async (req, res) => {
         }
         
         // Xóa member khỏi room
-        room.members = room.members.filter(memberId => memberId.toString() !== userId);
+        room.members = room.members.filter(memberId => {
+            const id = memberId._id ? memberId._id.toString() : memberId.toString();
+            return id !== userId;
+        });
         
         // Nếu là admin tự rời, xóa khỏi danh sách admin
         if (isRemovingSelf && isAdmin) {
