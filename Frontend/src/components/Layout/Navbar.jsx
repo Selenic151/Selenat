@@ -38,7 +38,10 @@ const Navbar = () => {
 
   useEffect(() => {
     if (!socket) return;
-    const receivedHandler = () => setUnreadCount(c => c + 1);
+    const receivedHandler = (notification) => {
+      console.log('📩 Navbar: Received invitation notification:', notification);
+      setUnreadCount(c => c + 1);
+    };
     const acceptedHandler = () => setUnreadCount(c => c - 1 > 0 ? c - 1 : 0);
     on('invitation:received', receivedHandler);
     on('invitation:accepted', acceptedHandler);
@@ -51,7 +54,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-gradient-to-r from-blue-500 via-purple-600 to-blue-700 border-b border-white/20 px-6 py-4 flex items-center justify-between shadow-lg backdrop-blur-sm">
+    <nav className="bg-green-300 border-b border-white/20 px-6 py-4 flex items-center justify-between shadow-lg backdrop-blur-sm">
       <div className="flex items-center space-x-4">
         {/* Notifications Button */}
         <div className="relative">
@@ -116,9 +119,9 @@ const Navbar = () => {
           {/* Dropdown Menu */}
           {showDropdown && (
             <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-200 py-3 z-10 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
+              <div className="px-4 py-3 border-b border-gray-100 bg-orange-50">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-orange-300 rounded-full flex items-center justify-center">
                     <span className="text-white font-semibold">
                       {user?.username?.charAt(0).toUpperCase()}
                     </span>

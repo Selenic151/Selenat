@@ -81,7 +81,8 @@ const ChatPage = () => {
   useEffect(() => {
     if (!socket) return;
     
-    const handleNewInvitation = () => {
+    const handleNewInvitation = (notification) => {
+      console.log('📩 ChatPage: Received invitation notification:', notification);
       setUnreadCount(prev => prev + 1);
     };
     
@@ -173,13 +174,13 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800">
+    <div className="flex h-screen overflow-hidden bg-orange-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800">
       
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-60 -right-60 w-[40rem] h-[40rem] bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-full blur-[120px] animate-float"></div>
-        <div className="absolute -bottom-60 -left-60 w-[40rem] h-[40rem] bg-gradient-to-br from-pink-400/20 to-orange-500/20 rounded-full blur-[120px] animate-float delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] bg-gradient-to-br from-indigo-400/10 to-cyan-500/10 rounded-full blur-[100px] animate-pulse-slow delay-500"></div>
+        <div className="absolute -top-60 -right-60 w-[40rem] h-[40rem] bg-orange-200/20 rounded-full blur-[120px] animate-float"></div>
+        <div className="absolute -bottom-60 -left-60 w-[40rem] h-[40rem] bg-orange-300/20 rounded-full blur-[120px] animate-float delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] bg-orange-100/10 rounded-full blur-[100px] animate-pulse-slow delay-500"></div>
       </div>
 
       {/* Sidebar */}
@@ -188,9 +189,9 @@ const ChatPage = () => {
         style={{ width: `${sidebarWidth}px`, minWidth: '250px', maxWidth: '500px' }}
       >
         {/* Header */}
-        <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-linear-to-r from-blue-500 via-purple-600 to-pink-500 text-white relative overflow-hidden">
+        <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-orange-200 text-white relative overflow-hidden">
           {/* Animated background gradient */}
-          <div className="absolute inset-0 bg-linear-to-r from-blue-600/20 via-purple-700/20 to-pink-600/20 animate-gradient-shift"></div>
+          <div className="absolute inset-0 bg-orange-300/20 animate-gradient-shift"></div>
           
           <div className="flex items-center justify-between relative z-10">
             <div className="flex items-center space-x-3">

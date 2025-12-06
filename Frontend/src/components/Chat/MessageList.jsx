@@ -187,7 +187,7 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
             <div className={it.isLastInGroup ? '' : 'w-8 h-8'}>
               {it.isLastInGroup && (
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm text-white font-semibold shadow-lg avatar-hover transition-all duration-300 ${
-                  isDark ? 'bg-linear-to-br from-gray-600 to-gray-800' : 'bg-linear-to-br from-gray-400 to-gray-600'
+                  isDark ? 'bg-orange-200' : 'bg-orange-100'
                 }`}>
                   {(it.msg.sender?.username || '').charAt(0).toUpperCase()}
                 </div>
@@ -208,7 +208,7 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
               data-msg-bubble 
               className={`message-bubble px-4 py-3 rounded-2xl shadow-sm transition-all duration-300 ${
                 it.isOwn 
-                  ? 'bg-linear-to-br from-blue-500 to-blue-600 text-white rounded-tr-md shadow-blue-500/25' 
+                  ? 'bg-orange-300 text-white rounded-tr-md shadow-orange-300/25' 
                   : isDark 
                     ? 'bg-gray-800/90 text-gray-100 rounded-tl-md border border-gray-700/50' 
                     : 'bg-white text-gray-900 rounded-tl-md border border-gray-200/50 shadow-gray-200/50'
@@ -303,16 +303,16 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
         <div className="text-center space-y-6">
           {/* Animated logo/icon */}
           <div className="relative">
-            <div className="w-16 h-16 bg-linear-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto shadow-2xl animate-float">
+            <div className="w-16 h-16 bg-orange-300 rounded-2xl flex items-center justify-center mx-auto shadow-2xl animate-float">
               <svg className="w-8 h-8 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
             </div>
-            <div className="absolute -inset-2 bg-linear-to-r from-blue-400 to-purple-500 rounded-2xl blur-lg opacity-30 animate-pulse"></div>
+            <div className="absolute -inset-2 bg-orange-300 rounded-2xl blur-lg opacity-30 animate-pulse"></div>
           </div>
           
           <div className="space-y-2">
-            <div className="w-48 h-4 bg-linear-to-r from-gray-300 to-gray-200 rounded-full mx-auto animate-shimmer"></div>
+            <div className="w-48 h-4 bg-orange-200 rounded-full mx-auto animate-shimmer"></div>
             <div className="w-32 h-3 bg-linear-to-r from-gray-200 to-gray-100 rounded-full mx-auto animate-shimmer delay-200"></div>
           </div>
           

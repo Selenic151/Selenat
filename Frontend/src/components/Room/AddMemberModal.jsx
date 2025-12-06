@@ -102,7 +102,7 @@ const AddMemberModal = ({ room, onClose, onSuccess }) => {
                     onClick={() => handleAddUser(user)}
                     className="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center space-x-3 transition-colors"
                   >
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                    <div className="w-10 h-10 bg-orange-300 rounded-full flex items-center justify-center text-white font-semibold">
                       {user.username?.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1">

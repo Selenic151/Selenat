@@ -23,15 +23,26 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (isAuthenticated && token && !socketRef.current) {
+      console.log('🔌 Connecting to socket with token:', token?.substring(0, 20) + '...');
       const newSocket = socketService.connect(token);
       socketRef.current = newSocket;
       
+      newSocket.on('connect', () => {
+        console.log('✅ Socket connected successfully, ID:', newSocket.id);
+      });
+
+      newSocket.on('disconnect', () => {
+        console.log('❌ Socket disconnected');
+      });
+      
       // Listen to online/offline events
       newSocket.on('user:online', (data) => {
+        console.log('👤 User online:', data.userId);
         setOnlineUsers((prev) => [...prev, data.userId]);
       });
 
       newSocket.on('user:offline', (data) => {
+        console.log('👤 User offline:', data.userId);
         setOnlineUsers((prev) => prev.filter((id) => id !== data.userId));
       });
 

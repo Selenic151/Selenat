@@ -61,7 +61,7 @@ const Login = () => {
       }`}>
         <div className="text-center mb-8">
           {/* Logo/Icon - Thay đổi màu sắc/gradient để thu hút hơn */}
-          <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-pink-500 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg shadow-purple-200 transform hover:scale-105 transition-transform duration-300">
+          <div className="w-20 h-20 bg-orange-300 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg shadow-orange-200 transform hover:scale-105 transition-transform duration-300">
             <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
@@ -168,7 +168,7 @@ const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white py-3.5 px-4 rounded-lg font-bold shadow-lg shadow-purple-300/50 hover:from-purple-700 hover:to-pink-600 focus:outline-none focus:ring-4 focus:ring-purple-500/50 transform transition-all duration-300 hover:scale-[1.01] disabled:opacity-60 disabled:cursor-wait relative overflow-hidden group"
+            className="w-full bg-orange-400 text-white py-3.5 px-4 rounded-lg font-bold shadow-lg shadow-orange-300/50 hover:bg-orange-500 focus:outline-none focus:ring-4 focus:ring-orange-500/50 transform transition-all duration-300 hover:scale-[1.01] disabled:opacity-60 disabled:cursor-wait relative overflow-hidden group"
           >
             <span className="relative z-10 flex items-center justify-center">
               {loading ? (

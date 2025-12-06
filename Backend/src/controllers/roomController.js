@@ -51,6 +51,8 @@ const createRoom = async (req, res) => {
                         message: `Bạn được mời tham gia phòng ${room.name}`,
                         status: 'pending'
                     });
+                    // Populate notification before emitting
+                    await notification.populate('from to room');
                     notifications.push(notification);
                 } catch (nerr) {
                     // Log but do not fail creating the room because of notification issues
@@ -67,8 +69,13 @@ const createRoom = async (req, res) => {
             const onlineUsers = req.app.get('onlineUsers');
             if (onlineUsers) {
                 notifications.forEach(n => {
-                    const sid = onlineUsers.get(n.to.toString());
-                    if (sid) io.to(sid).emit('invitation:received', n);
+                    const sid = onlineUsers.get(n.to._id.toString());
+                    if (sid) {
+                        console.log(`Emitting invitation to user ${n.to._id} via socket ${sid}`);
+                        io.to(sid).emit('invitation:received', n);
+                    } else {
+                        console.log(`User ${n.to._id} is not online`);
+                    }
                 });
             }
         }

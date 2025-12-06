@@ -26,6 +26,7 @@ const Notifications = ({ onAccept }) => {
   useEffect(() => {
     if (!socket) return;
     const handler = (n) => {
+      console.log('📩 Received invitation notification:', n);
       setNotifications(prev => [n, ...prev]);
     };
     on('invitation:received', handler);

@@ -227,7 +227,7 @@ const RoomSettings = ({ room, onClose, onUpdate }) => {
                   return (
                     <div key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                        <div className="w-10 h-10 bg-orange-300 rounded-full flex items-center justify-center text-white font-semibold">
                           {member.username?.charAt(0).toUpperCase()}
                         </div>
                         <div>
@@ -306,7 +306,7 @@ const RoomSettings = ({ room, onClose, onUpdate }) => {
                   return (
                     <div key={member._id} className="flex items-center justify-between p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                        <div className="w-10 h-10 bg-orange-300 rounded-full flex items-center justify-center text-white font-semibold">
                           {member.username?.charAt(0).toUpperCase()}
                         </div>
                         <div>

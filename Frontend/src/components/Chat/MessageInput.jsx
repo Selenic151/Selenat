@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSocket } from '../../context/SocketContext';
 import { useTheme } from '../../context/useTheme';
 import imageCompression from 'browser-image-compression';
@@ -12,6 +12,16 @@ const MessageInput = ({ roomId, onSend, onUpload, darkMode: darkModeProp }) => {
   const typingTimeout = useRef(null);
   const { darkMode: themeDarkMode } = useTheme();
   const isDark = darkModeProp !== undefined ? darkModeProp : themeDarkMode;
+
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeout.current) {
+        clearTimeout(typingTimeout.current);
+        stopTyping(roomId);
+      }
+    };
+  }, [roomId, stopTyping]);
 
   const handleChange = (e) => {
     setMessage(e.target.value);
@@ -212,7 +222,7 @@ const MessageInput = ({ roomId, onSend, onUpload, darkMode: darkModeProp }) => {
           disabled={!message.trim() && selectedFiles.length === 0 || uploading}
           className={`p-4 rounded-2xl transition-all duration-300 shadow-xl ${
             (message.trim() || selectedFiles.length > 0) && !uploading
-              ? 'bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white transform hover:scale-105 btn-hover-lift'
+              ? 'bg-orange-400 hover:bg-orange-500 text-white transform hover:scale-105 btn-hover-lift'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}
           title="Gửi tin nhắn"

@@ -11,13 +11,13 @@ const Loader = ({ size = 'medium', text = 'Đang tải...' }) => {
         <div
           className={`${sizeClasses[size]} border-4 border-gray-200 rounded-full animate-spin`}
           style={{
-            background: 'conic-gradient(from 0deg, #3b82f6, #8b5cf6, #3b82f6)',
+            background: 'conic-gradient(from 0deg, #fb923c, #f97316, #fb923c)',
             borderRadius: '50%',
             mask: 'radial-gradient(farthest-side, transparent calc(100% - 4px), black calc(100% - 4px))',
             WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 4px), black calc(100% - 4px))'
           }}
         ></div>
-        <div className={`${sizeClasses[size]} border-4 border-transparent rounded-full absolute top-0 left-0 animate-pulse bg-gradient-to-r from-blue-500/20 to-purple-500/20`}></div>
+        <div className={`${sizeClasses[size]} border-4 border-transparent rounded-full absolute top-0 left-0 animate-pulse bg-orange-200/20`}></div>
       </div>
       {text && <p className="mt-4 text-gray-600 font-medium">{text}</p>}
     </div>
@@ -29,7 +29,7 @@ export default Loader;
 // Loader với full screen
 export const FullScreenLoader = ({ text = 'Đang tải...' }) => {
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-white via-blue-50 to-purple-50 bg-opacity-95 flex items-center justify-center z-50 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-orange-50 bg-opacity-95 flex items-center justify-center z-50 backdrop-blur-sm">
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-gray-200">
         <Loader size="large" text={text} />
       </div>

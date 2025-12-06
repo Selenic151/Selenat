@@ -382,7 +382,7 @@ const ChatWindow = ({ room }) => {
             <>
               <button 
                 onClick={() => setShowAddMemberModal(true)} 
-                className="px-4 py-2 text-sm rounded-xl transition-all duration-300 btn-hover-lift flex items-center gap-2 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium shadow-lg shadow-blue-500/25 group"
+                className="px-4 py-2 text-sm rounded-xl transition-all duration-300 btn-hover-lift flex items-center gap-2 bg-orange-300 hover:bg-orange-400 text-white font-medium shadow-lg shadow-orange-300/25 group"
                 title="Thêm thành viên"
               >
                 <svg className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -392,7 +392,7 @@ const ChatWindow = ({ room }) => {
               </button>
               <button 
                 onClick={handleLeaveRoom} 
-                className="px-4 py-2 text-sm rounded-xl transition-all duration-300 btn-hover-lift flex items-center gap-2 bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium shadow-lg shadow-red-500/25 group"
+                className="px-4 py-2 text-sm rounded-xl transition-all duration-300 btn-hover-lift flex items-center gap-2 bg-orange-400 hover:bg-orange-500 text-white font-medium shadow-lg shadow-orange-400/25 group"
                 title="Rời khỏi nhóm"
               >
                 <svg className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">

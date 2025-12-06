@@ -96,9 +96,7 @@ const createRoomSchema = Joi.object({
   
   members: Joi.array()
     .items(Joi.string().pattern(/^[0-9a-fA-F]{24}$/))
-    .min(1)
     .messages({
-      'array.min': 'At least one member is required',
       'string.pattern.base': 'Invalid member ID format'
     })
 });

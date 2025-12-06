@@ -49,9 +49,9 @@ const NewMessageModal = ({ isOpen, onClose, onRoomCreated }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-700">
+      <div className="bg-orange-50 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-orange-200">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 relative">
+        <div className="bg-orange-400 p-6 relative">
           <h2 className="text-2xl font-bold text-white">Tin nhắn mới</h2>
           <p className="text-blue-100 text-sm mt-1">Chọn bạn bè để bắt đầu trò chuyện</p>
           <button
@@ -100,7 +100,7 @@ const NewMessageModal = ({ isOpen, onClose, onRoomCreated }) => {
                   className="w-full p-4 flex items-center gap-4 hover:bg-gray-800/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
                 >
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                    <div className="w-12 h-12 rounded-full bg-orange-300 flex items-center justify-center text-white font-bold text-lg">
                       {friend.username?.[0]?.toUpperCase() || 'U'}
                     </div>
                     {friend.online && (

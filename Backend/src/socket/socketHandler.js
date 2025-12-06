@@ -136,14 +136,18 @@ module.exports = (io, app) => {
 
     // Typing indicator
     socket.on('typing:start', ({ roomId }) => {
+      console.log(`User ${socket.userId} typing in room ${roomId}`);
       socket.to(roomId).emit('user:typing', {
+        roomId: roomId,
         userId: socket.userId,
         username: socket.user.username
       });
     });
 
     socket.on('typing:stop', ({ roomId }) => {
+      console.log(`User ${socket.userId} stopped typing in room ${roomId}`);
       socket.to(roomId).emit('user:stopped_typing', {
+        roomId: roomId,
         userId: socket.userId
       });
     });
