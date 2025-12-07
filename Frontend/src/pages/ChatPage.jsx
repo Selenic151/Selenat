@@ -6,6 +6,8 @@ import CreateRoom from '../components/Room/CreateRoom';
 import Notifications from '../components/Notification/Notifications';
 import FriendsList from '../components/Friend/FriendsList';
 import NewMessageModal from '../components/Chat/NewMessageModal';
+import AddMemberModal from '../components/Room/AddMemberModal';
+import Navbar from '../components/Layout/Navbar';
 import { useSocket } from '../context/SocketContext';
 
 const loadRooms = async () => {
@@ -178,110 +180,38 @@ const ChatPage = () => {
       
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-60 -right-60 w-[40rem] h-[40rem] bg-orange-200/20 rounded-full blur-[120px] animate-float"></div>
-        <div className="absolute -bottom-60 -left-60 w-[40rem] h-[40rem] bg-orange-300/20 rounded-full blur-[120px] animate-float delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] bg-orange-100/10 rounded-full blur-[100px] animate-pulse-slow delay-500"></div>
+        <div className="absolute -top-60 -right-60 w-160 h-160 bg-orange-200/20 rounded-full blur-[120px] animate-float"></div>
+        <div className="absolute -bottom-60 -left-60 w-160 h-160 bg-orange-300/20 rounded-full blur-[120px] animate-float delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-120 h-120 bg-orange-100/10 rounded-full blur-[100px] animate-pulse-slow delay-500"></div>
       </div>
 
       {/* Sidebar */}
       <div 
-        className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 flex flex-col shadow-2xl relative z-10 card-hover"
+        className="bg-orange-100/80 dark:bg-orange-900/80 border-r border-orange-200/50 dark:border-orange-700/50 flex flex-col shadow-2xl relative z-10"
         style={{ width: `${sidebarWidth}px`, minWidth: '250px', maxWidth: '500px' }}
       >
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-orange-200 text-white relative overflow-hidden">
-          {/* Animated background gradient */}
-          <div className="absolute inset-0 bg-orange-300/20 animate-gradient-shift"></div>
-          
-          <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center shadow-lg backdrop-blur-sm avatar-hover">
-                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold animate-fade-in-up">Selenat Chat</h1>
-                <p className="text-sm text-blue-100 animate-fade-in-up delay-200">Trò chuyện tức thì</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowFriends(true)}
-                className="p-3 hover:bg-white/20 rounded-xl transition-all duration-300 btn-hover-lift relative group"
-                title="Bạn bè"
-              >
-                <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                {friendRequestCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-bounce notification-badge">
-                    {friendRequestCount}
-                  </span>
-                )}
-              </button>
-              
-              <button
-                onClick={handleOpenNotifications}
-                className="p-3 hover:bg-white/20 rounded-xl transition-all duration-300 btn-hover-lift relative group"
-                title="Thông báo"
-              >
-                <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM15 17H9a6 6 0 01-6-6V9a6 6 0 0110.293-4.293L15 9v8z" />
-                </svg>
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-bounce notification-badge">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </button>
-              
-              <button
-                onClick={logout}
-                className="p-3 hover:bg-white/20 rounded-xl transition-all duration-300 btn-hover-lift group"
-                title="Đăng xuất"
-              >
-                <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* User Info */}
-          <div className="mt-4 flex items-center space-x-3 bg-white/10 rounded-xl p-4 backdrop-blur-sm animate-slide-in-left delay-400">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center avatar-hover">
-              <span className="text-sm font-semibold text-white">
-                {user?.username?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-white">{user?.username}</p>
-              <p className="text-xs text-blue-100">Đang hoạt động</p>
-            </div>
-            <button
-              onClick={() => setShowNewMessage(true)}
-              className="p-3 bg-white/20 hover:bg-white/30 rounded-xl transition-all duration-300 btn-hover-lift group"
-              title="Tin nhắn mới"
-            >
-              <svg className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-          </div>
-        </div>
+        {/* Sidebar Header (Navbar) */}
+        <Navbar
+          user={user}
+          logout={logout}
+          unreadCount={unreadCount}
+          friendRequestCount={friendRequestCount}
+          onShowFriends={() => setShowFriends(true)}
+          onShowNotifications={handleOpenNotifications}
+          onShowNewMessage={() => setShowNewMessage(true)}
+        />
 
         {/* Rooms List */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-4">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <h2 className="text-lg font-semibold text-orange-700 mb-4 flex items-center">
               <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
               <span>Phòng chat ({rooms.length})</span>
               <button
                 onClick={handleCreateRoom}
-                className="ml-auto inline-flex items-center px-3 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
+                className="ml-auto inline-flex items-center px-3 py-1.5 bg-orange-500 text-white rounded-md text-sm"
                 title="Tạo phòng mới"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -306,22 +236,22 @@ const ChatPage = () => {
                   <div
                     key={room._id}
                     onClick={() => handleSelectRoom(room)}
-                    className={`p-4 rounded-xl cursor-pointer transition-all duration-300 card-hover animate-fade-in-up ${
+                    className={`p-4 rounded-xl cursor-pointer transition-all duration-300 animate-fade-in-up ${
                       selectedRoom?._id === room._id
-                        ? 'bg-linear-to-r from-blue-500 to-purple-600 text-white shadow-xl transform scale-[1.02] ring-2 ring-blue-300/50'
-                        : 'bg-white/60 dark:bg-gray-800/60 hover:bg-white/80 dark:hover:bg-gray-800/80 border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm'
+                        ? 'bg-linear-to-r from-orange-500 to-orange-700 text-white shadow-xl transform scale-[1.02] ring-2 ring-orange-300/50'
+                        : 'bg-orange-50 dark:bg-orange-900/60 border border-orange-200/50 dark:border-orange-700/50 hover:scale-[1.03] hover:bg-orange-100 hover:shadow-orange-200'
                     }`}
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <h3 className={`font-semibold text-sm transition-colors duration-300 ${
-                          selectedRoom?._id === room._id ? 'text-white' : 'text-gray-800 dark:text-gray-200'
+                          selectedRoom?._id === room._id ? 'text-white' : 'text-orange-900 dark:text-orange-100'
                         }`}>
                           {getRoomDisplayName()}
                         </h3>
                         <p className={`text-xs mt-1 transition-colors duration-300 ${
-                          selectedRoom?._id === room._id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
+                          selectedRoom?._id === room._id ? 'text-orange-100' : 'text-orange-700 dark:text-orange-300'
                         }`}>
                           {room.members?.length || 0} thành viên
                         </p>
@@ -421,22 +351,18 @@ const ChatPage = () => {
       )}
 
       {showNewMessage && (
-        <NewMessageModal
-          isOpen={showNewMessage}
+        <AddMemberModal
+          room={selectedRoom}
           onClose={() => setShowNewMessage(false)}
-          onRoomCreated={(room) => {
+          onSuccess={(room) => {
             // Check nếu room đã tồn tại trong list
             const existingRoom = rooms.find(r => r._id === room._id);
-            
             if (existingRoom) {
-              // Nếu đã có, chỉ cần select room đó
               setSelectedRoom(existingRoom);
             } else {
-              // Nếu chưa có, thêm vào đầu list
               setRooms([room, ...rooms]);
               setSelectedRoom(room);
             }
-            
             setShowNewMessage(false);
           }}
         />

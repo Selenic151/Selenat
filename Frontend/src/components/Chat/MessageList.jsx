@@ -243,14 +243,14 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
                           rel="noopener noreferrer"
                           className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 hover:scale-[1.02] ${
                             it.isOwn 
-                              ? 'bg-blue-600/80 hover:bg-blue-600 text-blue-50' 
+                              ? 'bg-orange-600/80 hover:bg-orange-600 text-orange-50' 
                               : isDark 
                                 ? 'bg-gray-700/80 hover:bg-gray-700 text-gray-200' 
                                 : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                           }`}
                         >
                           <div className={`p-2 rounded-lg ${
-                            it.isOwn ? 'bg-blue-500' : isDark ? 'bg-gray-600' : 'bg-gray-300'
+                            it.isOwn ? 'bg-orange-500' : isDark ? 'bg-gray-600' : 'bg-gray-300'
                           }`}>
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -258,7 +258,7 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm truncate">{att.originalName}</div>
-                            <div className={`text-xs ${it.isOwn ? 'text-blue-200' : isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <div className={`text-xs ${it.isOwn ? 'text-orange-200' : isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                               {att.size ? `${(att.size / 1024).toFixed(1)} KB` : ''}
                             </div>
                           </div>
@@ -271,7 +271,7 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
 
               {/* Text content */}
               {it.msg.content && (
-                <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">{it.msg.content}</div>
+                <div className="text-sm leading-relaxed whitespace-pre-wrap break-word">{it.msg.content}</div>
               )}
               
               {/* Timestamp and status */}
@@ -295,7 +295,7 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
         </div>
       </div>
     );
-  }, [items, isDark]);
+  }, [items, isDark, room?.type]);
 
   if (loading) {
     return (

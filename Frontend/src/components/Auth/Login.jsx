@@ -51,8 +51,8 @@ const Login = () => {
       
       {/* Animated Background Elements - Tinh chỉnh hiệu ứng nhẹ nhàng hơn */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-60 -right-60 w-[30rem] h-[30rem] bg-indigo-500/10 rounded-full blur-[100px] animate-pulse-slow"></div>
-        <div className="absolute -bottom-60 -left-60 w-[30rem] h-[30rem] bg-pink-500/10 rounded-full blur-[100px] animate-pulse-slow delay-1000"></div>
+        <div className="absolute -top-60 -right-60 w-120 h-120 bg-indigo-500/10 rounded-full blur-[100px] animate-pulse-slow"></div>
+        <div className="absolute -bottom-60 -left-60 w-120 h-120 bg-pink-500/10 rounded-full blur-[100px] animate-pulse-slow delay-1000"></div>
       </div>
       
       {/* Form Container */}
@@ -75,7 +75,7 @@ const Login = () => {
         {/* Error Alert */}
         {error && (
           <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center text-sm" role="alert">
-            <svg className="w-4 h-4 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 mr-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
             <span className="font-medium">{error}</span>

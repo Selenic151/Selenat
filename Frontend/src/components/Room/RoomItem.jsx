@@ -1,6 +1,6 @@
 import { useSocket } from '../../context/SocketContext';
 import { useState, useEffect } from 'react';
-import { roomAPI } from '../../api';
+import { roomAPI } from '../../services/api';
 
 const RoomItem = ({ room, isSelected, onSelect }) => {
   const { onlineUsers, socket } = useSocket();

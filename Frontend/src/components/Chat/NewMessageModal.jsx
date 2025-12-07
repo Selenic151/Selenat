@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { friendAPI, roomAPI } from '../../api';
+import { friendAPI, roomAPI } from '../../services/api';
 import { X, Search, User, Loader2 } from 'lucide-react';
 
 const NewMessageModal = ({ isOpen, onClose, onRoomCreated }) => {
