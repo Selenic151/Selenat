@@ -6,8 +6,8 @@ import CreateRoom from '../components/Room/CreateRoom';
 import Notifications from '../components/Notification/Notifications';
 import FriendsList from '../components/Friend/FriendsList';
 import NewMessageModal from '../components/Chat/NewMessageModal';
-import AddMemberModal from '../components/Room/AddMemberModal';
 import Navbar from '../components/Layout/Navbar';
+import AppSettings from '../components/Common/AppSettings';
 import { useSocket } from '../context/SocketContext';
 
 const loadRooms = async () => {
@@ -29,8 +29,9 @@ const ChatPage = () => {
   const [showNewMessage, setShowNewMessage] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [friendRequestCount, setFriendRequestCount] = useState(0);
-  const [sidebarWidth, setSidebarWidth] = useState(320); // Default 320px (w-80)
+  const [sidebarWidth, setSidebarWidth] = useState(() => (typeof window !== 'undefined' ? Math.round(window.innerWidth * 0.25) : 320)); // Default 25% of viewport width (in px)
   const [isResizing, setIsResizing] = useState(false);
+  const [showAppSettings, setShowAppSettings] = useState(false);
   const { user, logout } = useAuth();
   const { socket, on, off } = useSocket();
 
@@ -199,6 +200,7 @@ const ChatPage = () => {
           onShowFriends={() => setShowFriends(true)}
           onShowNotifications={handleOpenNotifications}
           onShowNewMessage={() => setShowNewMessage(true)}
+          onShowAppSettings={() => setShowAppSettings(true)}
         />
 
         {/* Rooms List */}
@@ -276,6 +278,27 @@ const ChatPage = () => {
           </div>
         </div>
 
+        {/* Sidebar Footer (App Settings) */}
+        <div className="mt-2 p-3 border-t border-orange-200/50 dark:border-orange-700/50 bg-transparent">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setShowAppSettings(true)}
+              className="inline-flex items-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm shadow"
+              title="Cài đặt ứng dụng"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2v4c0 1.105 1.343 2 3 2s3-.895 3-2v-4c0-1.105-1.343-2-3-2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09c0-.7-.39-1.34-1-1.71a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09c.7 0 1.34-.39 1.71-1a1.65 1.65 0 00-.33-1.82l-.06-.06A2 2 0 016.45 3.7l.06.06a1.65 1.65 0 001.82.33H8a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09c0 .7.39 1.34 1 1.71a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V8c.7 0 1.34.39 1.71 1a1.65 1.65 0 00-.33 1.82z" />
+              </svg>
+              Cài đặt
+            </button>
+
+            <div className="text-xs text-gray-600 dark:text-gray-300">
+              <span>Signed in as <strong>{user?.username}</strong></span>
+            </div>
+          </div>
+        </div>
+
         {/* Resize Handle */}
         <div
           className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 transition-colors z-10 group"
@@ -284,6 +307,11 @@ const ChatPage = () => {
           <div className="absolute top-1/2 -translate-y-1/2 -right-0.5 w-1.5 h-16 bg-gray-300 rounded-full group-hover:bg-blue-500 group-hover:w-2 transition-all shadow-sm"></div>
         </div>
       </div>
+
+      {/* App Settings Modal */}
+      {showAppSettings && (
+        <AppSettings onClose={() => setShowAppSettings(false)} />
+      )}
 
       {/* Chat Window */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -350,23 +378,22 @@ const ChatPage = () => {
         </div>
       )}
 
-      {showNewMessage && (
-        <AddMemberModal
-          room={selectedRoom}
-          onClose={() => setShowNewMessage(false)}
-          onSuccess={(room) => {
-            // Check nếu room đã tồn tại trong list
-            const existingRoom = rooms.find(r => r._id === room._id);
-            if (existingRoom) {
-              setSelectedRoom(existingRoom);
-            } else {
-              setRooms([room, ...rooms]);
-              setSelectedRoom(room);
-            }
-            setShowNewMessage(false);
-          }}
-        />
-      )}
+      {/* New Message Modal (open when user clicks the + button in Navbar) */}
+      <NewMessageModal
+        isOpen={showNewMessage}
+        onClose={() => setShowNewMessage(false)}
+        onRoomCreated={(room) => {
+          // If room already exists, select it; otherwise prepend and select
+          const existingRoom = rooms.find(r => r._id === room._id);
+          if (existingRoom) {
+            setSelectedRoom(existingRoom);
+          } else {
+            setRooms([room, ...rooms]);
+            setSelectedRoom(room);
+          }
+          setShowNewMessage(false);
+        }}
+      />
     </div>
   );
 };

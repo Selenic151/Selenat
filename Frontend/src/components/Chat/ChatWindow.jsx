@@ -8,6 +8,7 @@ import { useMessageCache } from '../../context/useMessageCache';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import TypingIndicator from './TypingIndicator';
+import ChatSidebar from './ChatSidebar';
 
 const ChatWindow = ({ room }) => {
   const [messages, setMessages] = useState([]);
@@ -377,32 +378,6 @@ const ChatWindow = ({ room }) => {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* Show action buttons for group/private rooms only */}
-          {room.type !== 'direct' && (
-            <>
-              <button 
-                onClick={() => setShowAddMemberModal(true)} 
-                className="px-4 py-2 text-sm rounded-xl transition-all duration-300 btn-hover-lift flex items-center gap-2 bg-orange-300 hover:bg-orange-400 text-white font-medium shadow-lg shadow-orange-300/25 group"
-                title="Thêm thành viên"
-              >
-                <svg className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <span>Thêm</span>
-              </button>
-              <button 
-                onClick={handleLeaveRoom} 
-                className="px-4 py-2 text-sm rounded-xl transition-all duration-300 btn-hover-lift flex items-center gap-2 bg-orange-400 hover:bg-orange-500 text-white font-medium shadow-lg shadow-orange-400/25 group"
-                title="Rời khỏi nhóm"
-              >
-                <svg className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                <span>Rời</span>
-              </button>
-            </>
-          )}
-          
           <button 
             onClick={toggleTheme} 
             className={`p-3 rounded-xl transition-all duration-300 btn-hover-lift ${
@@ -488,60 +463,25 @@ const ChatWindow = ({ room }) => {
       </div>
 
       {/* Sidebar */}
-      {showSidebar && (
-        <div className="fixed inset-0 flex z-50">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowSidebar(false)} />
-          <div className={`ml-auto w-80 h-full overflow-y-auto relative z-10 ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
-            {/* Sidebar header */}
-            <div className={`sticky top-0 flex justify-between items-center px-6 py-4 border-b ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-gray-50'}`}>
-              <h3 className="font-semibold">Thành viên</h3>
-              <button onClick={() => setShowSidebar(false)} className="text-lg">✕</button>
-            </div>
-            
-            {/* Search */}
-            <div className={`p-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-              <input 
-                type="text" 
-                value={memberSearch} 
-                onChange={e => searchMembers(e.target.value)} 
-                placeholder="Tìm kiếm..." 
-                className={`w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-100 placeholder-gray-500' : 'bg-gray-100 border-gray-200 text-gray-900 placeholder-gray-500'}`}
-              />
-            </div>
-            
-            {/* Member results */}
-            {memberResults.length > 0 && (
-              <div className={`border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-                <p className={`text-xs px-4 pt-3 font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>KẾT QUẢ TÌM KIẾM</p>
-                {memberResults.map(u => (
-                  <div key={u._id} className={`flex justify-between items-center px-4 py-2.5 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`}>
-                    <span className="text-sm">{u.username}</span>
-                    <button onClick={() => inviteMember(u._id)} className="px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">Mời</button>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {/* Current members */}
-            <div className="p-4">
-              <p className={`text-xs font-semibold mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>THÀNH VIÊN ({room.members?.length || 0})</p>
-              <div className="space-y-1">
-                {room.members?.map(m => (
-                  <div key={m._id} className={`flex justify-between items-center px-3 py-2 rounded-lg ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}>
-                    <span className="text-sm">{m.username}</span>
-                    <button onClick={() => removeMember(m._id)} className="text-xs text-red-500 hover:text-red-600 font-medium">Xoá</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ChatSidebar
+        show={showSidebar}
+        onClose={() => setShowSidebar(false)}
+        room={room}
+        user={user}
+        darkMode={darkMode}
+        onAddMember={() => setShowAddMemberModal(true)}
+        onLeaveRoom={handleLeaveRoom}
+        memberSearch={memberSearch}
+        memberResults={memberResults}
+        onSearchMembers={searchMembers}
+        onInviteMember={inviteMember}
+        onRemoveMember={removeMember}
+      />
 
       {/* Add Member Modal */}
       {showAddMemberModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowAddMemberModal(false)} />
+          <div className="absolute inset-0 backdrop-blur-md bg-black/10" onClick={() => setShowAddMemberModal(false)} />
           <div className={`relative w-full max-w-md mx-4 rounded-xl shadow-2xl ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
             {/* Modal header */}
             <div className={`flex justify-between items-center px-6 py-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>

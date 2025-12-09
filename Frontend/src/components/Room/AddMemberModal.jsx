@@ -60,8 +60,9 @@ const AddMemberModal = ({ room, onClose, onSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-orange-100 bg-opacity-70 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border-2 border-orange-400">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+      <div className="absolute inset-0 backdrop-blur-md bg-black/10" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md border-2 border-orange-400">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-orange-200">
           <div>

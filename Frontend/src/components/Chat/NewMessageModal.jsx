@@ -53,7 +53,7 @@ const NewMessageModal = ({ isOpen, onClose, onRoomCreated }) => {
         {/* Header */}
         <div className="bg-orange-400 p-6 relative">
           <h2 className="text-2xl font-bold text-white">Tin nhắn mới</h2>
-          <p className="text-blue-100 text-sm mt-1">Chọn bạn bè để bắt đầu trò chuyện</p>
+          <p className="text-orange-100 text-sm mt-1">Chọn bạn bè để bắt đầu trò chuyện</p>
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all"
@@ -64,15 +64,15 @@ const NewMessageModal = ({ isOpen, onClose, onRoomCreated }) => {
         </div>
 
         {/* Search */}
-        <div className="p-4 border-b border-gray-700">
+        <div className="p-4 border-b border-orange-200">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-400" />
             <input
               type="text"
               placeholder="Tìm kiếm bạn bè..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full pl-10 pr-4 py-3 bg-white border border-orange-200 rounded-xl text-orange-900 placeholder-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all"
             />
           </div>
         </div>
@@ -81,40 +81,40 @@ const NewMessageModal = ({ isOpen, onClose, onRoomCreated }) => {
         <div className="max-h-96 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+              <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
             </div>
           ) : filteredFriends.length === 0 ? (
             <div className="text-center py-12">
-              <User className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">
+              <User className="w-16 h-16 text-orange-400 mx-auto mb-4" />
+              <p className="text-orange-600">
                 {searchTerm ? 'Không tìm thấy bạn bè' : 'Bạn chưa có bạn bè nào'}
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-700">
+            <div className="divide-y divide-orange-100">
               {filteredFriends.map((friend) => (
                 <button
                   key={friend._id}
                   onClick={() => handleSelectFriend(friend._id)}
                   disabled={creating}
-                  className="w-full p-4 flex items-center gap-4 hover:bg-gray-800/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                  className="w-full p-4 flex items-center gap-4 hover:bg-orange-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
                 >
                   <div className="relative">
                     <div className="w-12 h-12 rounded-full bg-orange-300 flex items-center justify-center text-white font-bold text-lg">
                       {friend.username?.[0]?.toUpperCase() || 'U'}
                     </div>
                     {friend.online && (
-                      <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-gray-900"></div>
+                      <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></div>
                     )}
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="font-semibold text-white group-hover:text-blue-400 transition-colors">
+                    <p className="font-semibold text-orange-900 group-hover:text-orange-600 transition-colors">
                       {friend.username}
                     </p>
-                    <p className="text-sm text-gray-400 truncate">{friend.email}</p>
+                    <p className="text-sm text-orange-600 truncate">{friend.email}</p>
                   </div>
                   {creating && (
-                    <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                    <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
                   )}
                 </button>
               ))}

@@ -240,6 +240,32 @@
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
+/* Theme status utilities */
+.btn-accept {
+  background-color: var(--success, #10b981);
+  color: white;
+}
+.btn-accept:hover { filter: brightness(0.95); }
+
+.btn-decline {
+  background-color: var(--danger, #ef4444);
+  color: white;
+}
+.btn-decline:hover { filter: brightness(0.95); }
+
+.badge-accepted {
+  background-color: rgba(var(--success-rgb, 16, 185, 129), 0.12);
+  color: var(--success, #10b981);
+}
+.badge-declined {
+  background-color: rgba(var(--danger-rgb, 239, 68, 68), 0.12);
+  color: var(--danger, #ef4444);
+}
+.badge-read {
+  background-color: rgba(var(--info-rgb, 59, 130, 246), 0.12);
+  color: var(--info, #3b82f6);
+}
+
 /* Glass morphism effect */
 .glass {
   background: rgba(255, 255, 255, 0.1);

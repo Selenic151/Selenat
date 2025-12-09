@@ -1,5 +1,5 @@
 import React from 'react';
-import { useThemeContext } from '../../context/ThemeContext';
+import { useThemeContext } from '../../context/ThemeContextStore';
 
 const ThemeSelector = () => {
   const { colorTheme, changeColorTheme, colorPalettes } = useThemeContext();

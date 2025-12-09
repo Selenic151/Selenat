@@ -10,7 +10,10 @@ const Navbar = ({
   onShowNewMessage,
 }) => {
   return (
-    <div className="p-6 border-b border-orange-200/50 dark:border-orange-700/50 bg-orange-400 text-white relative overflow-hidden">
+    <div
+      className="p-6 border-b border-orange-200/50 dark:border-orange-700/50 relative overflow-hidden"
+      style={{ backgroundColor: 'var(--primary)', color: 'var(--accent-text)' }}
+    >
       {/* Animated background gradient */}
       <div className="absolute inset-0 bg-orange-300/20 animate-gradient-shift"></div>
       <div className="flex items-center justify-between relative z-10">
@@ -22,7 +25,7 @@ const Navbar = ({
           </div>
           <div>
             <h1 className="text-xl font-bold animate-fade-in-up">Selenat Chat</h1>
-            <p className="text-sm text-blue-100 animate-fade-in-up delay-200">Trò chuyện tức thì</p>
+            <p className="text-sm animate-fade-in-up delay-200">Trò chuyện tức thì</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
