@@ -27,8 +27,8 @@ const getMessages = async (req, res) => {
       return res.status(403).json({ message: 'Not a member of this room' });
     }
 
-    // Build query
-    const query = { room: roomId };
+    // Build query (exclude messages hidden for current user)
+    const query = { room: roomId, $or: [ { hiddenFor: { $exists: false } }, { hiddenFor: { $ne: req.user._id } } ] };
     let sortOrder = -1;
     // Semantics: use `after` as a cursor to fetch older messages (createdAt < after)
     if (before) {
@@ -234,9 +234,73 @@ const uploadFiles = async (req, res) => {
   }
 };
 
+// @desc    Delete message for current user (hide)
+// @route   DELETE /api/messages/:id
+// @access  Private
+const deleteMessageForMe = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const message = await Message.findById(id);
+    if (!message) return res.status(404).json({ message: 'Message not found' });
+
+    // Add user to hiddenFor if not already present
+    const uid = req.user._id;
+    if (!message.hiddenFor) message.hiddenFor = [];
+    if (!message.hiddenFor.some(u => u.toString() === uid.toString())) {
+      message.hiddenFor.push(uid);
+      await message.save();
+    }
+
+    res.json({ message: 'Deleted for current user', deletedFor: uid });
+  } catch (error) {
+    console.error('Delete message for me error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Revoke message (delete for all)
+// @route   POST /api/messages/:id/revoke
+// @access  Private
+const revokeMessage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const message = await Message.findById(id);
+    if (!message) return res.status(404).json({ message: 'Message not found' });
+
+    const room = await Room.findById(message.room);
+    if (!room) return res.status(404).json({ message: 'Room not found' });
+
+    const isSender = message.sender.toString() === req.user._id.toString();
+    const isAdmin = room.admins.some(a => a.toString() === req.user._id.toString());
+
+    if (!isSender && !isAdmin) {
+      return res.status(403).json({ message: 'Only sender or room admin can revoke this message' });
+    }
+
+    // Mark as revoked and clear content/attachments; keep a placeholder
+    message.revoked = true;
+    message.content = '';
+    message.attachments = [];
+    await message.save();
+
+    // Emit socket event to notify clients to remove/replace the message
+    const io = req.app.get('io');
+    if (io) {
+      io.to(room._id.toString()).emit('message:revoked', { messageId: message._id.toString() });
+    }
+
+    res.json({ message: 'Message revoked for all', id: message._id });
+  } catch (error) {
+    console.error('Revoke message error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getMessages,
   createMessage,
   markAsRead,
-  uploadFiles
+  uploadFiles,
+  deleteMessageForMe,
+  revokeMessage
 };

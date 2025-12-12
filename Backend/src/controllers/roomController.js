@@ -102,13 +102,55 @@ const getUserRooms = async (req, res) => {
             cacheKey,
             async () => {
                 // Chỉ populate thông tin cần thiết (không populate hết members)
-                return await Room.find({ members: req.user._id })
+                // Include participantSettings so we can filter out rooms the user has deleted for themselves
+                const rawRooms = await Room.find({ members: req.user._id })
                     .populate('creator', 'username avatar')
                     .populate('members', 'username email avatar online') // Chỉ lấy info cơ bản
                     .populate('lastMessage.sender', 'username avatar')
-                    .select('-participantSettings') // Không trả về settings trong list
                     .sort({ updatedAt: -1 })
                     .lean(); // Use lean() for better performance (plain JS objects)
+
+                // Filter out rooms where participantSettings[userid].deleted === true
+                const filtered = [];
+                for (const r of rawRooms) {
+                    const settings = r.participantSettings ? r.participantSettings[req.user._id] : null;
+                    if (settings && settings.deleted) continue;
+
+                    // Adjust lastMessage for this user: if lastMessage refers to a message hiddenFor this user or revoked,
+                    // find the latest visible message for this user in the room and use it as lastMessage (do not modify DB)
+                    if (r.lastMessage && r.lastMessage._id) {
+                        try {
+                            const hiddenOrRevoked = await Message.findOne({ _id: r.lastMessage._id, $or: [ { hiddenFor: req.user._id }, { revoked: true } ] }).lean();
+                            if (hiddenOrRevoked) {
+                                // find next latest non-hidden, non-revoked message
+                                const replacement = await Message.findOne({
+                                    room: r._id,
+                                    revoked: { $ne: true },
+                                    $or: [ { hiddenFor: { $exists: false } }, { hiddenFor: { $ne: req.user._id } } ]
+                                }).sort({ createdAt: -1 }).populate('sender', 'username avatar').lean();
+
+                                if (replacement) {
+                                    r.lastMessage = {
+                                        _id: replacement._id,
+                                        content: replacement.content,
+                                        sender: replacement.sender ? { _id: replacement.sender._id, username: replacement.sender.username, avatar: replacement.sender.avatar } : undefined,
+                                        createdAt: replacement.createdAt
+                                    };
+                                } else {
+                                    delete r.lastMessage;
+                                }
+                            }
+                        } catch (e) {
+                            // ignore errors and leave lastMessage as-is
+                            console.error('adjust lastMessage error:', e && e.message ? e.message : e);
+                        }
+                    }
+
+                    if (r.participantSettings) delete r.participantSettings;
+                    filtered.push(r);
+                }
+
+                return filtered;
             },
             300 // 5 minutes
         );
@@ -523,4 +565,35 @@ module.exports = {
     createDirectRoom,
     getUnreadCount,
     markRoomAsRead
+    , deleteRoomForMe
+};
+
+
+
+// @desc Mark a room as deleted/hidden for the current user (delete conversation for me)
+// @route POST /api/rooms/:id/deleteForMe
+// @access Private
+const deleteRoomForMe = async (req, res) => {
+    try {
+        const room = await Room.findById(req.params.id);
+        if (!room) return res.status(404).json({ message: 'Room not found' });
+        if (!room.members.some(m => m.toString() === req.user._id.toString())) {
+            return res.status(403).json({ message: 'Bạn không phải thành viên của phòng này' });
+        }
+
+        const key = req.user._id.toString();
+        const current = room.participantSettings && room.participantSettings.get(key) ? room.participantSettings.get(key) : {};
+        current.deleted = true;
+        current.deletedAt = new Date();
+        room.participantSettings.set(key, current);
+        await room.save();
+
+        // Invalidate cache for this user
+        await invalidateMultipleUserRoomsCache([key]);
+
+        res.json({ message: 'Conversation removed for current user' });
+    } catch (error) {
+        console.error('deleteRoomForMe error:', error);
+        res.status(500).json({ message: error.message });
+    }
 };

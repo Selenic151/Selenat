@@ -9,6 +9,7 @@ import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import TypingIndicator from './TypingIndicator';
 import ChatSidebar from './ChatSidebar';
+import ConfirmModal from '../Common/ConfirmModal';
 
 const ChatWindow = ({ room }) => {
   const [messages, setMessages] = useState([]);
@@ -162,6 +163,15 @@ const ChatWindow = ({ room }) => {
       });
     };
 
+    const handleRevoked = ({ messageId }) => {
+      setMessages(prev => {
+        const next = prev.map(m => m._id === messageId ? { ...m, revoked: true, content: '', attachments: [] } : m);
+        // Update cache
+        updateCache(room._id, () => next);
+        return next;
+      });
+    };
+
     const onRoomDeleted = ({ roomId }) => {
       if (roomId === room._id) {
         setMessages([]);
@@ -202,6 +212,7 @@ const ChatWindow = ({ room }) => {
     socket?.on('room:deleted', onRoomDeleted);
     socket?.on('member:joined', handleMemberJoined);
     socket?.on('member:left', handleMemberLeft);
+    socket?.on('message:revoked', handleRevoked);
 
     return () => {
       leaveRoom(room._id);
@@ -209,6 +220,7 @@ const ChatWindow = ({ room }) => {
       socket?.off('room:deleted', onRoomDeleted);
       socket?.off('member:joined', handleMemberJoined);
       socket?.off('member:left', handleMemberLeft);
+      socket?.off('message:revoked', handleRevoked);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room, socket, joinRoom, leaveRoom]);
@@ -248,6 +260,60 @@ const ChatWindow = ({ room }) => {
       alert('Gửi tin nhắn thất bại');
     }
   };
+
+  const handleDeleteMessageForMe = async (messageId) => {
+    openConfirm({
+      title: 'Xóa tin nhắn',
+      message: 'Bạn có chắc muốn xóa tin nhắn này chỉ đối với bạn?',
+      confirmText: 'Xóa',
+      onConfirm: async () => {
+        try {
+          await messageAPI.deleteMessage(messageId);
+          setMessages(prev => {
+            const next = prev.filter(m => m._id !== messageId);
+            updateCache(room._id, () => next);
+            return next;
+          });
+        } catch (err) {
+          console.error('Delete message for me failed', err);
+          alert('Không thể xóa tin nhắn: ' + (err.response?.data?.message || err.message));
+        } finally {
+          closeConfirm();
+        }
+      }
+    });
+  };
+
+  const handleRevokeMessage = async (messageId) => {
+    openConfirm({
+      title: 'Thu hồi tin nhắn',
+      message: 'Bạn có chắc muốn thu hồi tin nhắn này cho tất cả mọi người?',
+      confirmText: 'Thu hồi',
+      onConfirm: async () => {
+        try {
+          await messageAPI.revokeMessage(messageId);
+          // optimistic update: mark message revoked locally (server will also emit)
+          setMessages(prev => {
+            const next = prev.map(m => m._id === messageId ? { ...m, revoked: true, content: '', attachments: [] } : m);
+            updateCache(room._id, () => next);
+            return next;
+          });
+        } catch (err) {
+          console.error('Revoke message failed', err);
+          alert('Không thể thu hồi tin nhắn: ' + (err.response?.data?.message || err.message));
+        } finally {
+          closeConfirm();
+        }
+      }
+    });
+  };
+
+  // Confirm modal state
+  const [confirmProps, setConfirmProps] = useState(null);
+  const openConfirm = ({ title, message, confirmText, cancelText, onConfirm }) => {
+    setConfirmProps({ open: true, title, message, confirmText, cancelText, onConfirm });
+  };
+  const closeConfirm = () => setConfirmProps(null);
 
   const handleUpload = async (formData) => {
     try {
@@ -309,9 +375,14 @@ const ChatWindow = ({ room }) => {
       return;
     }
     if (!confirm(`Bạn có chắc muốn rời khỏi phòng "${room.name}"?`)) return;
-    
+
     try {
-      await roomAPI.removeMember(room._id, user._id);
+      if (room.type === 'direct') {
+        // For direct rooms, delete conversation for current user
+        await roomAPI.deleteForMe(room._id);
+      } else {
+        await roomAPI.removeMember(room._id, user._id);
+      }
       // Reload page or navigate away
       window.location.reload();
     } catch (err) {
@@ -433,6 +504,8 @@ const ChatWindow = ({ room }) => {
             isAtBottomRef.current = isBottom;
             if (isBottom) setNewMessagesCount(0);
           }}
+          onDeleteMessage={handleDeleteMessageForMe}
+          onRevokeMessage={handleRevokeMessage}
         />
         {newMessagesCount > 0 && (
           <button 
@@ -471,6 +544,24 @@ const ChatWindow = ({ room }) => {
         darkMode={darkMode}
         onAddMember={() => setShowAddMemberModal(true)}
         onLeaveRoom={handleLeaveRoom}
+        onDeleteConversation={async (roomId) => {
+          openConfirm({
+            title: 'Xóa cuộc trò chuyện',
+            message: 'Bạn có chắc muốn xóa cuộc trò chuyện này chỉ đối với bạn?',
+            confirmText: 'Xóa',
+            onConfirm: async () => {
+              try {
+                await roomAPI.deleteForMe(roomId);
+                window.location.reload();
+              } catch (err) {
+                console.error('Delete conversation failed', err);
+                alert('Không thể xóa cuộc trò chuyện: ' + (err.response?.data?.message || err.message));
+              } finally {
+                closeConfirm();
+              }
+            }
+          });
+        }}
         memberSearch={memberSearch}
         memberResults={memberResults}
         onSearchMembers={searchMembers}
@@ -537,6 +628,17 @@ const ChatWindow = ({ room }) => {
           </div>
         </div>
       )}
+
+      {/* Confirm modal */}
+      <ConfirmModal
+        open={!!confirmProps}
+        title={confirmProps?.title}
+        message={confirmProps?.message}
+        confirmText={confirmProps?.confirmText}
+        cancelText={confirmProps?.cancelText}
+        onConfirm={() => confirmProps?.onConfirm?.()}
+        onCancel={() => closeConfirm()}
+      />
 
       {/* Transfer Ownership Modal */}
       {showTransferOwnershipModal && (

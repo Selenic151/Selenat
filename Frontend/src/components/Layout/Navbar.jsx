@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Avatar from '../Common/Avatar';
 
 const Navbar = ({
   user,
@@ -80,10 +81,14 @@ const Navbar = ({
       </div>
       {/* User Info */}
       <div className="mt-4 flex items-center space-x-3 bg-orange-200/30 rounded-xl p-4 animate-slide-in-left delay-400">
-        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center avatar-hover">
-          <span className="text-sm font-semibold text-white">
-            {user?.username?.charAt(0).toUpperCase()}
-          </span>
+        <div className="w-10 h-10">
+          <Avatar
+            avatar={user?.avatar}
+            username={user?.username}
+            size="w-10 h-10"
+            className="object-cover"
+            bgClass={"bg-white/20"}
+          />
         </div>
         <div className="flex-1">
           <p className="text-sm font-medium text-white">{user?.username}</p>

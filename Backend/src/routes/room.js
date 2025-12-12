@@ -13,6 +13,7 @@ const {
   createDirectRoom,
   getUnreadCount,
   markRoomAsRead
+  , deleteRoomForMe
 } = require('../controllers/roomController');
 const { protect } = require('../middleware/auth');
 const validate = require('../middleware/validate');
@@ -47,6 +48,9 @@ router.post('/:id/members', protect, validate(addMembersSchema), addMember);
 router.delete('/:id/members/:userId', protect, removeMember);
 router.put('/:id/avatar', protect, upload.single('avatar'), uploadRoomAvatar);
 router.post('/:id/transfer', protect, transferOwnership);
+
+// Mark room deleted for current user (hide conversation for this user only)
+router.post('/:id/deleteForMe', protect, deleteRoomForMe);
 
 // Unread count endpoints
 router.get('/:roomId/unread', protect, getUnreadCount);

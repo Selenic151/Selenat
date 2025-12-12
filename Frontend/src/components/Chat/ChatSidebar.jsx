@@ -13,7 +13,8 @@ const ChatSidebar = ({
   memberSearch,
   memberResults,
   onSearchMembers,
-  onInviteMember
+  onInviteMember,
+  onDeleteConversation
 }) => {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showRoomSettings, setShowRoomSettings] = useState(false);
@@ -63,7 +64,20 @@ const ChatSidebar = ({
               </div>
             </div>
           </div>
-          {room.type !== 'direct' && (
+          {room.type === 'direct' ? (
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => (typeof onDeleteConversation === 'function' ? onDeleteConversation(room._id) : onLeaveRoom?.(room._id))}
+                className="px-3 py-1.5 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition font-medium flex items-center gap-1"
+                title="Xóa cuộc trò chuyện"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Xóa
+              </button>
+            </div>
+          ) : (
             <div className="flex gap-2 justify-center">
               <button 
                 onClick={() => setShowAddMemberModal(true)} 

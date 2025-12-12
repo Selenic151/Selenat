@@ -40,6 +40,17 @@ const messageSchema = new mongoose.Schema({
       default: Date.now
     }
   }]
+  ,
+  // Users for whom this message is hidden (deleted "for me")
+  hiddenFor: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  // If true, message has been revoked (deleted for everyone)
+  revoked: {
+    type: Boolean,
+    default: false
+  }
 }, {
   timestamps: true
 });

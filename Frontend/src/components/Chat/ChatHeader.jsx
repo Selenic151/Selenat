@@ -1,6 +1,15 @@
 import React from 'react';
+import { useAuth } from '../../context/AuthContext';
+import Avatar from '../Common/Avatar';
 
 const ChatHeader = ({ room, darkMode, getRoomDisplayName, onToggleTheme, onShowSidebar }) => {
+  const { user } = useAuth();
+  // for direct rooms, prefer the other member's avatar; for group/room use the room avatar
+  const otherMember = room?.members?.find(m => String(m._id) !== String(user?._id));
+  const avatarSrc = room?.type === 'direct'
+    ? (otherMember?.avatar || room?.avatar)
+    : (room?.avatar || otherMember?.avatar);
+
   return (
     <div className={`flex items-center justify-between px-6 py-4 border-b backdrop-blur-sm transition-all duration-300 ${
       darkMode 
@@ -8,20 +17,33 @@ const ChatHeader = ({ room, darkMode, getRoomDisplayName, onToggleTheme, onShowS
         : 'border-gray-200/50 bg-white/80 shadow-lg'
     }`}>
       <div className="flex items-center space-x-4">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center avatar-hover ${
-          darkMode ? 'bg-gray-800' : 'bg-gray-100'
-        }`}>
-          <svg className={`w-5 h-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-        </div>
+        <Avatar
+          avatar={avatarSrc}
+          username={getRoomDisplayName()}
+          size="w-10 h-10"
+          className="object-cover"
+          bgClass={darkMode ? 'bg-gray-800' : 'bg-gray-100'}
+        />
         <div>
-          <h2 className={`text-lg font-bold transition-colors duration-300 ${
-            darkMode ? 'text-white' : 'text-gray-900'
-          }`}>{getRoomDisplayName()}</h2>
-          <p className={`text-sm transition-colors duration-300 ${
-            darkMode ? 'text-gray-400' : 'text-gray-500'
-          }`}>{room.members?.length || 0} thành viên</p>
+          {room?.type === 'direct' ? (
+            <>
+              <h2 className={`text-lg font-bold transition-colors duration-300 ${
+                darkMode ? 'text-white' : 'text-gray-900'
+              }`}>{otherMember?.username || getRoomDisplayName()}</h2>
+              <p className={`text-sm transition-colors duration-300 ${
+                darkMode ? 'text-gray-400' : 'text-gray-500'
+              }`}>Đang hoạt động</p>
+            </>
+          ) : (
+            <>
+              <h2 className={`text-lg font-bold transition-colors duration-300 ${
+                darkMode ? 'text-white' : 'text-gray-900'
+              }`}>{getRoomDisplayName()}</h2>
+              <p className={`text-sm transition-colors duration-300 ${
+                darkMode ? 'text-gray-400' : 'text-gray-500'
+              }`}>{room.members?.length || 0} thành viên</p>
+            </>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-3">

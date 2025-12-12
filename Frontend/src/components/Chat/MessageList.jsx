@@ -1,6 +1,8 @@
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/useTheme';
-import { useRef, useCallback, useEffect, useMemo } from 'react';
+import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
+
+import Avatar from '../Common/Avatar';
 import { Virtuoso } from 'react-virtuoso';
 
 // Helper to get server URL without /api suffix
@@ -9,12 +11,15 @@ const getServerURL = () => {
   return apiUrl.replace(/\/api$/, ''); // Remove /api suffix
 };
 
-const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomChange, loadingOlder = false, hasMore, darkMode, onMeasureAvg, virtuosoRef: externalRef, room }) => {
+// Uses shared Avatar component from Common/Avatar
+
+const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomChange, loadingOlder = false, hasMore, darkMode, onMeasureAvg, virtuosoRef: externalRef, room, onDeleteMessage, onRevokeMessage }) => {
   const { user } = useAuth();
   const { darkMode: themeDarkMode } = useTheme();
   const isDark = darkMode !== undefined ? darkMode : themeDarkMode;
   const internalRef = useRef(null);
   const virtuosoRef = externalRef || internalRef;
+  const [openMenuId, setOpenMenuId] = useState(null);
   const measureTimerRef = useRef(null);
   const loadOlderDebounceRef = useRef(null);
   const resizeObserverRef = useRef(null);
@@ -114,6 +119,17 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
     };
   }, [messages, loading, onMeasureAvg]);
 
+  // Close message menu when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      // If click is inside a message menu, ignore
+      if (e.target.closest && e.target.closest('.msg-menu')) return;
+      setOpenMenuId(null);
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, []);
+
   // Notify parent when bottom state changes
   const handleAtBottomStateChange = useCallback((bottom) => {
     if (isAtBottomRef) isAtBottomRef.current = bottom;
@@ -185,13 +201,15 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
           {/* Avatar for others shown only on last message of group */}
           {!it.isOwn && (
             <div className={it.isLastInGroup ? '' : 'w-8 h-8'}>
-              {it.isLastInGroup && (
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm text-white font-semibold shadow-lg avatar-hover transition-all duration-300 ${
-                  isDark ? 'bg-orange-200' : 'bg-orange-100'
-                }`}>
-                  {(it.msg.sender?.username || '').charAt(0).toUpperCase()}
-                </div>
-              )}
+                  {it.isLastInGroup && (
+                    <Avatar
+                      avatar={it.msg.sender?.avatar}
+                      username={it.msg.sender?.username}
+                      size="w-10 h-10"
+                      className="shadow-lg avatar-hover transition-all duration-300"
+                      bgClass={isDark ? 'bg-orange-200' : 'bg-orange-100'}
+                    />
+                  )}
             </div>
           )}
 
@@ -215,6 +233,11 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
               } ${it.msg.pending ? 'opacity-70' : ''}`}
             >
               
+              {/* If revoked, show placeholder */}
+              {it.msg.revoked ? (
+                <div className={`italic text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Tin nhắn đã được thu hồi</div>
+              ) : (
+                <>              
               {/* Attachments */}
               {it.msg.attachments && it.msg.attachments.length > 0 && (
                 <div className="mb-3 space-y-2">
@@ -270,12 +293,14 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
               )}
 
               {/* Text content */}
-              {it.msg.content && (
+              {!it.msg.revoked && it.msg.content && (
                 <div className="text-sm leading-relaxed whitespace-pre-wrap break-word">{it.msg.content}</div>
+              )}
+              </>
               )}
               
               {/* Timestamp and status */}
-              <div className={`flex items-center justify-end gap-1 mt-2 text-xs ${
+              <div className={`flex items-center justify-end gap-2 mt-2 text-xs ${
                 it.isOwn 
                   ? 'text-blue-100' 
                   : isDark ? 'text-gray-500' : 'text-gray-600'
@@ -290,12 +315,62 @@ const MessageList = ({ messages, loading, onLoadOlder, isAtBottomRef, onBottomCh
             </div>
           </div>
 
+          {/* Message actions menu (three dots) */}
+          <div className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setOpenMenuId(o => (o === it.msg._id ? null : it.msg._id)); }}
+              className={`w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-transform duration-150 ${openMenuId === it.msg._id ? 'scale-95' : ''}`}
+              title="Thao tác"
+              aria-expanded={openMenuId === it.msg._id}
+            >
+              {/* Vertical kebab icon */}
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <circle cx="12" cy="5" r="1.6" className="text-current" />
+                <circle cx="12" cy="12" r="1.6" className="text-current" />
+                <circle cx="12" cy="19" r="1.6" className="text-current" />
+              </svg>
+            </button>
+
+            {openMenuId === it.msg._id && (
+              <div
+                className="msg-menu absolute right-0 bottom-full mb-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 transform-gpu transition-all duration-150 origin-bottom-right"
+                style={{ willChange: 'transform, opacity' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* small pointer */}
+                <div className="absolute right-3 -bottom-2 w-3 h-3 rotate-45 bg-white dark:bg-gray-800 border-l border-t border-gray-200 dark:border-gray-700" />
+
+                <button
+                  onClick={() => { setOpenMenuId(null); onDeleteMessage && onDeleteMessage(it.msg._id); }}
+                  className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 7h12M9 7v10a2 2 0 002 2h2a2 2 0 002-2V7M10 11v6M14 11v6" />
+                  </svg>
+                  <span>Xóa</span>
+                </button>
+
+                {it.isOwn && (
+                  <button
+                    onClick={() => { setOpenMenuId(null); onRevokeMessage && onRevokeMessage(it.msg._id); }}
+                    className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0v6a2 2 0 01-1 1.732M4 7v6a2 2 0 001 1.732M12 11v10" />
+                    </svg>
+                    <span>Thu hồi</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Spacer for own messages */}
           {it.isOwn && <div className="w-10" />}
         </div>
       </div>
     );
-  }, [items, isDark, room?.type]);
+  }, [items, isDark, room?.type, onDeleteMessage, onRevokeMessage, openMenuId]);
 
   if (loading) {
     return (

@@ -16,4 +16,5 @@ export const roomAPI = {
   transferOwnership: (id, newCreatorId) => apiClient.post(`/rooms/${id}/transfer`, { newCreatorId }),
   getUnreadCount: (roomId) => apiClient.get(`/rooms/${roomId}/unread`),
   markAsRead: (roomId) => apiClient.post(`/rooms/${roomId}/read`),
+  deleteForMe: (id) => apiClient.post(`/rooms/${id}/deleteForMe`),
 };
