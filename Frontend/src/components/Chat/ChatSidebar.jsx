@@ -18,6 +18,23 @@ const ChatSidebar = ({
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showRoomSettings, setShowRoomSettings] = useState(false);
   const onlineCount = room && room.members ? room.members.filter(m => m.online).length : (room?.onlineCount ?? (room?.members?.length ?? 0));
+
+  // For direct messages, derive the other participant to display their name/avatar
+  const getOtherMember = () => {
+    if (!room || room.type !== 'direct') return null;
+    return room.members?.find(m => m._id !== user._id) || null;
+  };
+
+  const otherMember = getOtherMember();
+
+  const displayName = room?.type === 'direct'
+    ? (otherMember?.username || room?.name || 'Người dùng')
+    : (room?.name || 'Phòng');
+
+  const displayAvatar = (() => {
+    if (room?.type === 'direct') return otherMember?.avatar || room?.avatar || null;
+    return room?.avatar || null;
+  })();
   if (!show) return null;
 
   return (
@@ -30,16 +47,19 @@ const ChatSidebar = ({
             <button onClick={onClose} className="absolute right-0 top-0 text-lg hover:opacity-70">✕</button>
             <div className="flex flex-col items-center mb-3">
               <div className={`w-16 h-16 rounded-full overflow-hidden flex items-center justify-center mb-3 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                {room?.avatar ? (
-                  <img src={room.avatar} alt={room.name} className="w-full h-full object-cover" />
+                {displayAvatar ? (
+                  <img src={displayAvatar} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
                   <span className={`text-xl font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                    {room?.name?.charAt(0)?.toUpperCase() || '?'}
+                    {displayName?.charAt(0)?.toUpperCase() || '?'}
                   </span>
                 )}
               </div>
               <div className="text-center">
-                <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{room?.name || 'Phòng'}</h3>
+                <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{displayName}</h3>
+                {room?.type === 'direct' && otherMember?.status && (
+                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{otherMember.status}</p>
+                )}
               </div>
             </div>
           </div>
@@ -89,48 +109,50 @@ const ChatSidebar = ({
           />
         )}
         
-        {/* Current members */}
-        <div className="p-4">
-          <p className={`text-xs font-semibold mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>THÀNH VIÊN ({room.members?.length || 0})</p>
+        {/* Current members - hide for direct messages (only one other participant) */}
+        {room?.type !== 'direct' && (
+          <div className="p-4">
+            <p className={`text-xs font-semibold mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>THÀNH VIÊN ({room.members?.length || 0})</p>
 
-          {/* Inline search (now part of members block) */}
-          <div className="mb-3">
-            <input
-              type="text"
-              value={memberSearch || ''}
-              onChange={e => onSearchMembers?.(e.target.value)}
-              placeholder="Tìm kiếm người dùng..."
-              className={`w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 transition ${darkMode ? 'bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 focus:ring-blue-600' : 'bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-blue-500'}`}
-            />
-            {memberResults?.length > 0 && (
-              <div className={`mt-2 max-h-48 overflow-y-auto rounded-lg shadow ${darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}>
-                {memberResults.map(u => (
-                  <div key={u._id} className={`flex items-center justify-between px-4 py-2 hover:opacity-95 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>{u.username?.charAt(0).toUpperCase()}</div>
-                      <div>
-                        <div className={`text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{u.username}</div>
-                        <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{u.email}</div>
+            {/* Inline search (now part of members block) */}
+            <div className="mb-3">
+              <input
+                type="text"
+                value={memberSearch || ''}
+                onChange={e => onSearchMembers?.(e.target.value)}
+                placeholder="Tìm kiếm người dùng..."
+                className={`w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 transition ${darkMode ? 'bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 focus:ring-blue-600' : 'bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-blue-500'}`}
+              />
+              {memberResults?.length > 0 && (
+                <div className={`mt-2 max-h-48 overflow-y-auto rounded-lg shadow ${darkMode ? 'bg-gray-900 border border-gray-800' : 'bg-white border border-gray-200'}`}>
+                  {memberResults.map(u => (
+                    <div key={u._id} className={`flex items-center justify-between px-4 py-2 hover:opacity-95 ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>{u.username?.charAt(0).toUpperCase()}</div>
+                        <div>
+                          <div className={`text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{u.username}</div>
+                          <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{u.email}</div>
+                        </div>
                       </div>
+                      <button onClick={() => onInviteMember?.(u._id)} className="px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">Mời</button>
                     </div>
-                    <button onClick={() => onInviteMember?.(u._id)} className="px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">Mời</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          <div className="space-y-1">
-            {room.members?.map(m => (
-              <div key={m._id} className={`flex justify-between items-center px-3 py-2 rounded-lg ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}>
-                <span className="text-sm">{m.username}</span>
-                {m._id !== user._id && (
-                  <button onClick={() => onRemoveMember(m._id)} className="text-xs text-red-500 hover:text-red-600 font-medium">Xoá</button>
-                )}
-              </div>
-            ))}
+            <div className="space-y-1">
+              {room.members?.map(m => (
+                <div key={m._id} className={`flex justify-between items-center px-3 py-2 rounded-lg ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}>
+                  <span className="text-sm">{m.username}</span>
+                  {m._id !== user._id && (
+                    <button onClick={() => onRemoveMember(m._id)} className="text-xs text-red-500 hover:text-red-600 font-medium">Xoá</button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Bottom bar: search, online count and settings button */}
         <div className={`absolute bottom-0 left-0 right-0 p-3 border-t ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-200 bg-white'}`}>

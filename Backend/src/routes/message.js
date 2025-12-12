@@ -5,7 +5,7 @@ const { protect } = require('../middleware/auth');
 const { messageLimiter } = require('../middleware/rateLimiter');
 const validate = require('../middleware/validate');
 const { createMessageSchema } = require('../validation/schemas');
-const upload = require('../config/multer');
+const { upload } = require('../config/multer');
 
 router.get('/:roomId', protect, getMessages);
 router.post('/', protect, messageLimiter, validate(createMessageSchema), createMessage);

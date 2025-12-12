@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { roomAPI, userAPI, notificationAPI } from '../../services/api';
+import TransferOwnershipModal from './TransferOwnershipModal';
 import { useAuth } from '../../context/AuthContext';
 
 const RoomSettings = ({ room, onClose, onUpdate }) => {
@@ -45,59 +46,92 @@ const RoomSettings = ({ room, onClose, onUpdate }) => {
   };
 
   const handleDeleteRoom = async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa room này? Tất cả tin nhắn sẽ bị xóa!')) return;
-
-    try {
-      await roomAPI.deleteRoom(room._id);
-      onClose();
-      window.location.reload();
-    } catch (error) {
-      console.error('Error deleting room:', error);
-      alert('Không thể xóa room: ' + error.response?.data?.message);
-    }
+    // open delete confirm modal
+    setDeleteConfirm({ open: true });
   };
 
-  const handleRemoveMember = async (userId, username) => {
-    const isSelf = userId === user._id;
-    const isCreatorLeaving = isSelf && isCreator;
-    
-    const confirmMsg = isSelf 
-      ? `Bạn có chắc chắn muốn rời khỏi phòng "${room.name}"?`
-      : `Bạn có chắc chắn muốn xóa "${username}" khỏi phòng?`;
-    
-    if (!window.confirm(confirmMsg)) return;
+  const [removeConfirm, setRemoveConfirm] = useState({ open: false, userId: null, username: '', isSelf: false });
+  const [processingRemove, setProcessingRemove] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
 
+  const performRemoveMember = async (userId, isSelf) => {
+    setProcessingRemove(true);
     try {
       const response = await roomAPI.removeMember(room._id, userId);
-      
-      // Kiểm tra nếu phòng bị xóa
-      if (response.data.deleted) {
+
+      if (response.data?.deleted) {
+        // Room was deleted as a result of this action (e.g., last member removed)
         alert(response.data.message);
+        setRemoveConfirm({ open: false, userId: null, username: '', isSelf: false });
         onClose();
-        window.location.reload();
+        // Notify parent that the room no longer exists so it can update its list
+        try {
+          onUpdate(null);
+        } catch {
+          // fallback to full reload if parent can't handle null
+          window.location.reload();
+        }
         return;
       }
-      
+
       if (isSelf) {
-        // User rời phòng - đóng modal và reload
+        // If the current user left the room, fetch the updated room; if it's gone, notify parent
+        try {
+          const updated = (await roomAPI.getRoomById(room._id)).data;
+          if (updated) {
+            onUpdate(updated);
+          } else {
+            onUpdate(null);
+          }
+        } catch {
+          // If fetching fails, fall back to closing modal and letting parent decide (or reload)
+          try { onUpdate(null); } catch { window.location.reload(); }
+        }
         onClose();
-        window.location.reload();
       } else {
-        // Admin xóa member - cập nhật room data
         const updated = (await roomAPI.getRoomById(room._id)).data;
         onUpdate(updated);
       }
     } catch (error) {
       console.error('Error removing member:', error);
-      
-      // Nếu creator cần chuyển quyền
+      // If backend requires transfer before leaving (creator case), open transfer modal
+      const isCreatorLeaving = removeConfirm.userId === user._id && isCreator;
       if (error.response?.data?.requireTransfer && isCreatorLeaving) {
-        alert('Bạn cần chuyển quyền chủ phòng cho thành viên khác trước khi rời. Vui lòng sử dụng nút "Rời khỏi nhóm" ở sidebar để thực hiện.');
+        setShowTransferModal(true);
       } else {
         alert('Không thể xóa thành viên: ' + error.response?.data?.message);
       }
+    } finally {
+      setProcessingRemove(false);
+      setRemoveConfirm({ open: false, userId: null, username: '', isSelf: false });
     }
   };
+
+  const handleRemoveMember = (userId, username) => {
+    const isSelf = userId === user._id;
+    setRemoveConfirm({ open: true, userId, username, isSelf });
+  };
+
+  // Delete room confirm state / handler
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false });
+  const [deletingRoom, setDeletingRoom] = useState(false);
+
+  const performDeleteRoom = async () => {
+    setDeletingRoom(true);
+    try {
+      await roomAPI.deleteRoom(room._id);
+      setDeleteConfirm({ open: false });
+      onClose();
+      // keep previous behavior of reload after delete to ensure app state consistency
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting room:', error);
+      alert('Không thể xóa room: ' + error.response?.data?.message);
+    } finally {
+      setDeletingRoom(false);
+    }
+  };
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -344,6 +378,83 @@ const RoomSettings = ({ room, onClose, onUpdate }) => {
           </div>
         )}
       </div>
+      {removeConfirm.open && (
+        <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-white/20">
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-gray-800">Xác nhận</h3>
+              <p className="text-sm text-gray-500 mt-2">
+                {removeConfirm.isSelf
+                  ? `Bạn có chắc chắn muốn rời khỏi phòng "${room.name}"?`
+                  : `Bạn có chắc chắn muốn xóa "${removeConfirm.username}" khỏi phòng?`}
+              </p>
+              <div className="mt-4 flex justify-end space-x-3">
+                <button
+                  onClick={() => setRemoveConfirm({ open: false, userId: null, username: '', isSelf: false })}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={() => {
+                    // If creator is leaving themselves, show transfer modal instead
+                    if (removeConfirm.isSelf && isCreator) {
+                      setShowTransferModal(true);
+                      setRemoveConfirm({ open: false, userId: null, username: '', isSelf: false });
+                      return;
+                    }
+                    performRemoveMember(removeConfirm.userId, removeConfirm.isSelf);
+                  }}
+                  disabled={processingRemove}
+                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                >
+                  {processingRemove ? 'Đang xử lý...' : (removeConfirm.isSelf ? 'Rời phòng' : 'Xóa')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTransferModal && (
+        <TransferOwnershipModal
+          room={room}
+          currentUserId={user._id}
+          onClose={() => setShowTransferModal(false)}
+          onSuccess={(updated) => {
+            // If parent provided updated room, use it to update UI without full reload
+            if (updated) onUpdate(updated);
+            setShowTransferModal(false);
+            onClose();
+          }}
+        />
+      )}
+
+      {deleteConfirm.open && (
+        <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-white/20 animate-fade-in-up">
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-gray-800">Xác nhận xóa phòng</h3>
+              <p className="text-sm text-gray-500 mt-2">Bạn có chắc chắn muốn xóa phòng "{room.name}"? Tất cả tin nhắn sẽ bị xoá.</p>
+              <div className="mt-4 flex justify-end space-x-3">
+                <button
+                  onClick={() => setDeleteConfirm({ open: false })}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={performDeleteRoom}
+                  disabled={deletingRoom}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                >
+                  {deletingRoom ? 'Đang xóa...' : 'Xóa phòng'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

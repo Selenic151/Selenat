@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { MessageCacheProvider } from './context/MessageCacheContext.jsx';
+import Toast from './components/Common/Toast';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -45,6 +46,7 @@ function App() {
                 />
                 <Route path="/" element={<Navigate to="/chat" replace />} />
               </Routes>
+              <Toast />
             </SocketProvider>
           </MessageCacheProvider>
         </ThemeProvider>

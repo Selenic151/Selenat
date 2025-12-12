@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { friendAPI } from '../../services/api';
 import { useSocket } from '../../context/SocketContext';
 
@@ -11,10 +11,34 @@ const FriendsList = ({ onRequestCountChange }) => {
   const [activeTab, setActiveTab] = useState('friends'); // friends, requests, search
   const { socket, on, off } = useSocket();
 
+  const loadFriends = useCallback(async () => {
+    try {
+      const res = await friendAPI.getFriends();
+      setFriends(res.data);
+    } catch (err) {
+      console.error('Error loading friends:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadFriendRequests = useCallback(async () => {
+    try {
+      const res = await friendAPI.getFriendRequests();
+      setFriendRequests(res.data);
+      // Cập nhật số lượng lời mời nhận được
+      if (onRequestCountChange) {
+        onRequestCountChange(res.data.received.length);
+      }
+    } catch (err) {
+      console.error('Error loading friend requests:', err);
+    }
+  }, [onRequestCountChange]);
+
   useEffect(() => {
     loadFriends();
     loadFriendRequests();
-  }, []);
+  }, [loadFriends, loadFriendRequests]);
 
   useEffect(() => {
     if (!socket) return;
@@ -35,31 +59,9 @@ const FriendsList = ({ onRequestCountChange }) => {
       off('friend:request', handleFriendRequest);
       off('friend:accepted', handleFriendAccepted);
     };
-  }, [socket, on, off]);
+  }, [socket, on, off, loadFriends, loadFriendRequests]);
 
-  const loadFriends = async () => {
-    try {
-      const res = await friendAPI.getFriends();
-      setFriends(res.data);
-    } catch (err) {
-      console.error('Error loading friends:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadFriendRequests = async () => {
-    try {
-      const res = await friendAPI.getFriendRequests();
-      setFriendRequests(res.data);
-      // Cập nhật số lượng lời mời nhận được
-      if (onRequestCountChange) {
-        onRequestCountChange(res.data.received.length);
-      }
-    } catch (err) {
-      console.error('Error loading friend requests:', err);
-    }
-  };
+  
 
   const handleSearch = async (query) => {
     setSearchQuery(query);
@@ -136,7 +138,7 @@ const FriendsList = ({ onRequestCountChange }) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-white/20 backdrop-blur-md">
       {/* Tabs */}
       <div className="flex border-b border-gray-200/50 bg-gray-50/50">
         <button
@@ -198,7 +200,7 @@ const FriendsList = ({ onRequestCountChange }) => {
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'friends' && (
           <div className="p-6">
-            {friends.length === 0 ? (
+              {friends.length === 0 ? (
               <div className="text-center py-16">
                 <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,10 +210,14 @@ const FriendsList = ({ onRequestCountChange }) => {
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">Chưa có bạn bè</h3>
                 <p className="text-sm text-gray-500">Hãy tìm kiếm và kết bạn với mọi người!</p>
               </div>
-            ) : (
+              ) : (
               <div className="space-y-3">
                 {friends.map(friend => (
-                  <div key={friend._id} className="group bg-orange-50 p-4 rounded-xl border border-orange-200 hover:shadow-lg hover:border-orange-300 transition-all duration-200">
+                  <div
+                    key={friend._id}
+                    className="rounded-lg p-4 hover:shadow-md transition-shadow"
+                    style={{ backgroundColor: 'var(--secondary)', border: '1px solid rgba(var(--secondary-rgb), 0.14)', color: 'var(--accent-text)' }}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="relative">
@@ -221,8 +227,8 @@ const FriendsList = ({ onRequestCountChange }) => {
                           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-800 text-base">{friend.username}</p>
-                          <p className="text-sm text-gray-500 flex items-center mt-1">
+                          <p className="font-semibold text-base" style={{ color: 'var(--accent-text)' }}>{friend.username}</p>
+                          <p className="text-sm flex items-center mt-1" style={{ color: 'rgba(var(--accent-text-rgb), 0.85)' }}>
                             <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                             </svg>
@@ -272,7 +278,11 @@ const FriendsList = ({ onRequestCountChange }) => {
               ) : (
                 <div className="space-y-3">
                   {friendRequests.received.map(user => (
-                    <div key={user._id} className="bg-orange-50 p-4 rounded-xl border border-orange-200 hover:shadow-md transition-all duration-200">
+                    <div
+                      key={user._id}
+                      className="rounded-lg p-4 hover:shadow-md transition-shadow"
+                      style={{ backgroundColor: 'var(--secondary)', border: '1px solid rgba(var(--secondary-rgb), 0.14)', color: 'var(--accent-text)' }}
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className="w-12 h-12 bg-orange-300 rounded-full flex items-center justify-center text-white font-bold shadow-md">
@@ -335,7 +345,11 @@ const FriendsList = ({ onRequestCountChange }) => {
               ) : (
                 <div className="space-y-3">
                   {friendRequests.sent.map(user => (
-                    <div key={user._id} className="bg-gray-50 p-4 rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200">
+                    <div
+                      key={user._id}
+                      className="rounded-lg p-4 hover:shadow-md transition-shadow"
+                      style={{ backgroundColor: 'var(--secondary)', border: '1px solid rgba(var(--secondary-rgb), 0.14)', color: 'var(--accent-text)' }}
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className="w-12 h-12 bg-orange-300 rounded-full flex items-center justify-center text-white font-bold">
@@ -387,7 +401,11 @@ const FriendsList = ({ onRequestCountChange }) => {
               searchResults.length > 0 ? (
                 <div className="space-y-3">
                   {searchResults.map(user => (
-                    <div key={user._id} className="bg-orange-50 p-4 rounded-xl border border-orange-200 hover:shadow-md hover:border-orange-300 transition-all duration-200">
+                    <div
+                      key={user._id}
+                      className="rounded-lg p-4 hover:shadow-md transition-shadow"
+                      style={{ backgroundColor: 'var(--secondary)', border: '1px solid rgba(var(--secondary-rgb), 0.14)', color: 'var(--accent-text)' }}
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className="w-12 h-12 bg-orange-300 rounded-full flex items-center justify-center text-white font-bold shadow-md">

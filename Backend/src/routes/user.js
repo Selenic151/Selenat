@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
+const { getUserById, updateUser, changePassword } = require('../controllers/userController');
+const { avatarUpload } = require('../config/multer');
+const { authLimiter } = require('../middleware/rateLimiter');
 
 // @desc    Search users by email or phone
 // @route   GET /api/users/search?q=query
@@ -35,5 +38,14 @@ router.get('/search', protect, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// Get user by id
+router.get('/:id', protect, getUserById);
+
+// Update user (supports avatar upload)
+router.put('/:id', protect, avatarUpload.single('avatar'), updateUser);
+
+// Change password (rate limited)
+router.post('/:id/change-password', protect, authLimiter, changePassword);
 
 module.exports = router;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const Navbar = ({
   user,
@@ -9,6 +9,16 @@ const Navbar = ({
   onShowNotifications,
   onShowNewMessage,
 }) => {
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const handleConfirmLogout = () => {
+    try {
+      logout();
+    } finally {
+      setShowLogoutConfirm(false);
+    }
+  };
+
   return (
     <div
       className="p-6 border-b border-orange-200/50 dark:border-orange-700/50 relative overflow-hidden"
@@ -58,7 +68,7 @@ const Navbar = ({
             )}
           </button>
           <button
-            onClick={logout}
+            onClick={() => setShowLogoutConfirm(true)}
             className="p-3 rounded-xl transition-all duration-300"
             title="Đăng xuất"
           >
@@ -89,6 +99,30 @@ const Navbar = ({
           </svg>
         </button>
       </div>
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-white/20">
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-gray-800">Xác nhận đăng xuất</h3>
+              <p className="text-sm text-gray-500 mt-2">Bạn có chắc chắn muốn đăng xuất không?</p>
+              <div className="mt-4 flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleConfirmLogout}
+                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                >
+                  Đăng xuất
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -55,4 +55,31 @@ const upload = multer({
   }
 });
 
-module.exports = upload;
+// Avatar upload storage (separate directory)
+const avatarDir = path.join(__dirname, '../../public/uploads/avatars');
+if (!fs.existsSync(avatarDir)) {
+  fs.mkdirSync(avatarDir, { recursive: true });
+}
+
+const avatarStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, avatarDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `${req.user ? req.user._id : 'anon'}-${uniqueSuffix}${ext}`);
+  }
+});
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Invalid avatar file type'), false);
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
+
+module.exports = { upload, avatarUpload };

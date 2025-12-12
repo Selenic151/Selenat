@@ -22,8 +22,16 @@ const TransferOwnershipModal = ({ room, currentUserId, onClose, onSuccess }) => 
       // Sau đó cho phép user rời phòng
       await roomAPI.removeMember(room._id, currentUserId);
       
-      alert('Đã chuyển quyền và rời phòng thành công');
-      onSuccess?.();
+      // Fetch updated room and pass to parent so it can update state without reloading
+      let updated = null;
+      try {
+        const res = await roomAPI.getRoomById(room._id);
+        updated = res.data;
+      } catch (e) {
+        console.warn('Could not fetch updated room after transfer', e);
+      }
+
+      onSuccess?.(updated);
       onClose();
     } catch (error) {
       console.error('Error transferring ownership:', error);
@@ -34,8 +42,8 @@ const TransferOwnershipModal = ({ room, currentUserId, onClose, onSuccess }) => 
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+    <div className="fixed inset-0 bg-transparent backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl w-full max-w-md animate-fade-in-up">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
